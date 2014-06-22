@@ -1,0 +1,50 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/ThrottleFragment"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:background="#cccc"
+    android:orientation="vertical">
+
+		<com.olinsdepot.od_traction.VerticalSeekBar
+		    android:id="@+id/Throttle"
+		    android:layout_width="26dp"
+		    android:layout_height="fill_parent"
+		    android:layout_marginLeft="11dp"
+		    android:layout_marginRight="11dp"
+		    android:layout_marginTop="4dp"
+		    android:layout_marginBottom="4dp"
+		    android:layout_below="@+id/BTNSTOP"
+		    android:layout_centerHorizontal="true"
+		    android:clickable="true"
+		    android:longClickable="false"
+		    android:progressDrawable="@drawable/progress_vertical"
+		    android:thumb="@drawable/seek_thumb" />
+
+		<Button
+		    android:id="@+id/BTNREV"
+		    style="?android:attr/buttonStyleSmall"
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:layout_toLeftOf="@+id/BTNSTOP"
+		    android:text="@string/BTNREV" />
+		
+		<Button
+		    android:id="@+id/BTNSTOP"
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:layout_centerHorizontal="true"
+		    android:background="#FF0000"
+		    android:text="@string/BTNSTOP" />
+
+		<Button
+		    android:id="@+id/BTNFWD"
+		    style="?android:attr/buttonStyleSmall"
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:layout_alignBaseline="@+id/BTNSTOP"
+		    android:layout_toRightOf="@+id/BTNSTOP"
+		    android:text="@string/BTNFWD" />
+
+</RelativeLayout>
+
