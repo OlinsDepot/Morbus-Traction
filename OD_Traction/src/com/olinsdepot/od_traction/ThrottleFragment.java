@@ -30,14 +30,10 @@ public class ThrottleFragment extends Fragment {
 	private OnThrottleChangeListener tListener;
 	
 	/**
-	 * String for logging the class name
-	 */
-	private final String TAG = getClass().getSimpleName();
-	
-	/**
-	 * String for log on or off flag
+	 * Logging flag and string for the class name
 	 */
 	private static final boolean L = true;
+	private final String TAG = getClass().getSimpleName();
 	
 	/**
 	 * Fragment characteristics, an example.
@@ -62,9 +58,9 @@ public class ThrottleFragment extends Fragment {
     }
 
  
-	//
-	// Life cycle functions
-	//
+	/**
+	 * Life cycle functions
+	 */
     
     // On Attach method
     @Override
@@ -166,14 +162,20 @@ public class ThrottleFragment extends Fragment {
 		return tFragView;
 	}
 	
-	// On Pause method
+	// On Activity created
 	@Override
-	public void onPause()
-	{
-		super.onPause();
+	public void onActivityCreated(Bundle saved) {
+		super.onActivityCreated(saved);
         if (L) Log.i(TAG, "onPause");
 	}
-
+	
+	// On Start
+	@Override
+	public void onStart() {
+		super.onStart();
+        if (L) Log.i(TAG, "onPause");
+	}
+	
 	// On Resume method
 	@Override
 	public void onResume()
@@ -182,9 +184,34 @@ public class ThrottleFragment extends Fragment {
         if (L) Log.i(TAG, "onResume");
 	}
 	
+	// On Pause method
+	@Override
+	public void onPause()
+	{
+		super.onPause();
+        if (L) Log.i(TAG, "onPause");
+	}
+	
+	// On Stop method
+	@Override
+	public void onStop() {
+		super.onStop();
+		if (L) Log.i(TAG, "onStop");
+	}
+	
+	// Save Instance State method
+	@Override
+	public void onSaveInstanceState(Bundle toSave) {
+		super.onSaveInstanceState(toSave);
+		if (L) Log.i(TAG, "onSaveInstanceState");
+	}
+	
 
-	// Button Handlers
-	private void setDirRev (View myView) {
+
+	/**
+	 *  Button Handlers
+	 */
+	 private void setDirRev (View myView) {
 		//logic to set direction to reverse.
 		if (tDir == 0) {
 			tDir = -1;

@@ -34,6 +34,12 @@ import android.widget.EditText;
  */
 public class NetFragment extends Fragment {
 	
+	/**
+	 * Logging - String for the class name, Logging on/off flag.
+	 */
+	private final String TAG = getClass().getSimpleName();
+	private static final boolean L = true;
+
 	// Container Activity must implement this interface
 	public interface OnServerChangeListener{
 		/**
@@ -48,14 +54,6 @@ public class NetFragment extends Fragment {
 	 */
 	MainActivity mActivity;
 	
-	/**
-	 * String for logging the class name
-	 */
-	private final String TAG = getClass().getSimpleName();
-	/**
-	 * String for log on or off flag
-	 */
-	 private static final boolean L = true;
 	 
 	 /**
 	  * Fragment characteristic, an example
@@ -63,7 +61,7 @@ public class NetFragment extends Fragment {
 	 private static final String ARG_IPADR = "IP_ADR";
 	 
 	 /**
-	  * Constructor for this fragment
+	  * Null constructor for this fragment
 	  */
 	 public NetFragment() { }
 	 
@@ -160,14 +158,12 @@ public class NetFragment extends Fragment {
 			};
 
 */
-	//
-    //Life cycle methods for the NET fragment
-    //
-    
-    /**
-     * Notification that the fragment is associated with an Activity
+	/**
+     * Life cycle methods for the NET fragment
      */
-    @Override
+    
+	// On Attach method
+	@Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
         if (L) Log.i(TAG, "onAttach " + activity.getClass().getSimpleName());
@@ -179,27 +175,21 @@ public class NetFragment extends Fragment {
             throw new ClassCastException(activity.toString() + " must implement Server Change Listener");
         }
 
-        /**
-         * Give main the section number so it can update the Action Bar title.
-         */
+        // Give main the section number so it can update the Action Bar title.
         this.mActivity = (MainActivity) activity;
         this.mActivity.onSectionAttached(1);
 
     }
 
-    /**
-     * Create notification
-     */
+    // On Create method
     @Override
     public void onCreate(Bundle saved) {
     	super.onCreate(saved);
     	if (L) Log.i(TAG, "onCreate");
     }
-   
 
-    /**
-     * CreateView notification
-     */
+
+	// On CreateView method
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         if (L) Log.i(TAG, "onCreateView");
@@ -223,58 +213,53 @@ public class NetFragment extends Fragment {
                 
         return netFragView;
     }
+
     
-    /**
-     * ActivityCreated notification
-     */
+    // On ActivityCreated method
     @Override
     public void onActivityCreated(Bundle saved) {
     	super.onActivityCreated(saved);
     	if (L) Log.i(TAG, "onActivityCreated");
     }
     
-    /**
-     * Start notification
-     */
+
+    // On Start method
     @Override
     public void onStart() {
     	super.onStart();
     	if (L) Log.i(TAG, "onStart");
     }
+
     
-    /**
-     * Resume notification
-     */
+    // On Resume method
     @Override
     public void onResume() {
     	super.onResume();
     	if (L) Log.i(TAG, "onResume");
     }
     
-    /**
-     * Pause notification
-     */
+
+    // On Pause method
     @Override
     public void onPause() {
     	super.onPause();
     	if (L) Log.i(TAG, "onPause");
     }
     
-    /**
-     * Stop notification
-     */
+
+    // On Stop method
     @Override
     public void onStop() {
     	super.onStop();
     	if (L) Log.i(TAG, "onStop");
     }
     
-    /**
-     * Notification to save instance state
-     */
+
+    // On SaveInstanceState method
     @Override
     public void onSaveInstanceState(Bundle toSave) {
     	super.onSaveInstanceState(toSave);
     	if (L) Log.i(TAG, "onSaveInstanceState");
     }
+    
 }

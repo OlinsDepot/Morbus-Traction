@@ -43,7 +43,7 @@ public class MainActivity extends Activity implements
 	/**
 	 * Name for this throttle
 	 */
-	static final String MYNAME = "OlinsDepot1";
+	static final String MYNAME = "Android-1";
 	
 	
     /**
