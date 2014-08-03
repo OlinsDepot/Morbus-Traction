@@ -1,27 +1,9 @@
 package com.olinsdepot.od_traction;
 
-import java.io.IOException;
-import java.net.UnknownHostException;
-
-import com.olinsdepot.od_traction.ThrottleFragment.OnThrottleChangeListener;
-
-//import com.olinsdepot.od_traction.MainActivity.WriteToServerTask;
-
 import android.app.Activity;
 import android.app.Fragment;
-
-import android.content.Context;
-
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
-
 import android.util.Log;
-
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -79,85 +61,16 @@ public class NetFragment extends Fragment {
 	 /**
 	  * onClickListener for Connect Button
 	  * @param view
+	  */
 	 public void onClickConnect(View view) {
 		 String mSrvrAddr = "192.168.1.0";
-		 int mSrvrPort = 500;
 		 
+//		 MbusService mSrvr = new MbusService();
+//		 mSrvr.CnctServer(mSrvrAddr);
 	     if (L) Log.i(TAG, "onClick Connect");
 		 
-		 ConnectivityManager connMgr = (ConnectivityManager) this.mActivity.getSystemService(Context.CONNECTIVITY_SERVICE);
-		 NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-		 if (networkInfo == null) {
-			 //no network connection
 		 }
-	  */
 
-/*
-			// Send message to the server
-			private class WriteToServerTask extends AsyncTask
-			<byte[], Void, Void> {
-
-				@Override
-				protected Void doInBackground(byte[]... data)
-				{
-					mbusSrvr.write(data[0]);
-					return null;
-				}
-			}
-			
-			// Close connection to the server
-			private class CloseSocketTask extends AsyncTask
-			<Void, Void, Void> {
-
-				@Override
-				protected Void doInBackground(Void... params) {
-					try {
-						mbusSrvr.cancel();
-					}
-					catch (IOException e)
-					{
-						Log.d("Traction", e.getLocalizedMessage());
-					}
-					return null;
-				}
-			}
-			
-			// Method to send a string to the server
-			private void sendToServer(String message)
-			{
-				byte[] theByteArray = message.getBytes();
-				new WriteToServerTask().execute(theByteArray);
-			}
-
-
-			// Handler to process a morbus message from the server.
-			static Handler mbusMsgIn = new Handler()
-			{
-				@Override
-				public void handleMessage(Message msg)
-				{
-					int type =msg.what;
-					if (type == 0) {
-						int numOfBytesReceived = msg.arg1;
-						byte[] buffer = (byte[]) msg.obj;
-						
-						// convert the entire byte array to string
-						String strReceived = new String(buffer);
-						
-						// extract only the actual string received
-						strReceived = strReceived.substring(0, numOfBytesReceived);
-						
-						// display the text received on the TextView
-			
-					} else if (type == 1) {
-						int tracID = msg.arg1;
-						int speed = msg.arg2;
-			//			sendToServer("ID="+tracID+" Speed="+speed);
-					}
-				}
-			};
-
-*/
 	/**
      * Life cycle methods for the NET fragment
      */

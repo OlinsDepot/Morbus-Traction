@@ -1,15 +1,13 @@
 package com.olinsdepot.od_traction;
 
-import android.content.Context;
-
 import android.app.Activity;
 import android.app.ActionBar;
 import android.app.FragmentTransaction;
+import android.content.Context;
 
-import android.os.AsyncTask;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 
 import android.util.Log;
 import android.view.Menu;
@@ -17,17 +15,6 @@ import android.view.MenuItem;
 
 import android.widget.Toast;
 import android.support.v4.widget.DrawerLayout;
-
-
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.io.IOException;
-
-import com.olinsdepot.od_traction.PlaceholderFragment;
-import com.olinsdepot.od_traction.MorbusStack;
 
 
 /**
@@ -39,11 +26,6 @@ public class MainActivity extends Activity implements
 		NavigationDrawerFragment.NavigationDrawerCallbacks,
 		NetFragment.OnServerChangeListener,
         ThrottleFragment.OnThrottleChangeListener {
-	
-	/**
-	 * Name for this throttle
-	 */
-	static final String MYNAME = "Android-1";
 	
 	
     /**
@@ -62,20 +44,15 @@ public class MainActivity extends Activity implements
 	private final String TAG = getClass().getSimpleName();
 	private static final boolean L = true;
 
-	/**
-	 * Thread for running the MORBUS protocol
-	 */
-	private InetAddress mbusSrvAdr;
-	private Socket mbusSocket;
-	private MorbusStack mbusSrvr;
-	private String mbusSrvName;
-	private int mbusSrvPort;
 
 
 	//
 	// MAIN Life Cycle Call Backs
 	//
 	
+	/**
+	 * OnCreate method
+	 */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -88,6 +65,14 @@ public class MainActivity extends Activity implements
 
         // Set up the drawer.
         mNavigationDrawerFragment.setUp(R.id.navigation_drawer, (DrawerLayout) findViewById(R.id.drawer_layout));
+        
+		//Check if network is up -
+		ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+		NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+		if (networkInfo == null) {
+			Toast.makeText(getApplicationContext(), "No Network Connection", Toast.LENGTH_SHORT).show();
+		}
+
     }
 
 	@Override
@@ -252,54 +237,16 @@ public class MainActivity extends Activity implements
     }
     
     //
-    // Network Page Interface
+    // Server Page Interface
     //
-    
+    /**
+     * Server page listener.
+     */
     @Override
     public void onServerChange(String srvrAddr, int srvrPort) {
-    	mbusSrvName = srvrAddr;
-    	mbusSrvPort = srvrPort;
-    	new CreateMbusThreadTask().execute(mbusSrvName);
+
     }
     
-    //
-    // Network
-    //
-    
-	// Open connection to the server
-	private class CreateMbusThreadTask extends AsyncTask <String, Integer, Void> {
-	
-		@Override
-		protected Void doInBackground(String...strings) {
-			//Check if network is up -
-			ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-			NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-			if (networkInfo == null) {
-				Toast.makeText(getApplicationContext(), "No Network Connection", Toast.LENGTH_SHORT).show();
-			}
-
-			// Connect to server
-			try {
-				//Create a socket
-				mbusSrvAdr = InetAddress.getByName(strings[0]);
-				mbusSocket = new Socket(mbusSrvAdr, 2000);
-				
-				//Create a thread to handle the socket
-				mbusSrvr = new MorbusStack(mbusSocket);
-				mbusSrvr.start();
-			}
-			catch (UnknownHostException e) {
-				Log.d(TAG, e.getLocalizedMessage());
-			}
-			catch (IOException e) {
-				Log.d(TAG, e.getLocalizedMessage());
-			}
-			
-	        if (L) Log.i(TAG, "Server connected");
-
-			return null;
-		}
-	}
 
 
 	//
