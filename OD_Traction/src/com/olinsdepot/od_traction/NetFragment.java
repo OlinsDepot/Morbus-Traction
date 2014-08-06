@@ -2,6 +2,7 @@ package com.olinsdepot.od_traction;
 
 import android.app.Activity;
 import android.app.Fragment;
+//import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -64,9 +65,8 @@ public class NetFragment extends Fragment {
 	  */
 	 public void onClickConnect(View view) {
 		 String mSrvrAddr = "192.168.1.0";
-		 
-//		 MbusService mSrvr = new MbusService();
-//		 mSrvr.CnctServer(mSrvrAddr);
+		 int mSrvrPort = 2005;
+		 netListener.onServerChange(mSrvrAddr, mSrvrPort);
 	     if (L) Log.i(TAG, "onClick Connect");
 		 
 		 }

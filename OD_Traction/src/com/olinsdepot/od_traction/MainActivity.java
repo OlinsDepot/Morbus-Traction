@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.ActionBar;
 import android.app.FragmentTransaction;
 import android.content.Context;
+import android.content.Intent;
 
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -72,7 +73,6 @@ public class MainActivity extends Activity implements
 		if (networkInfo == null) {
 			Toast.makeText(getApplicationContext(), "No Network Connection", Toast.LENGTH_SHORT).show();
 		}
-
     }
 
 	@Override
@@ -244,6 +244,8 @@ public class MainActivity extends Activity implements
      */
     @Override
     public void onServerChange(String srvrAddr, int srvrPort) {
+		 Intent mbus = new Intent(this, MbusService.class);
+		 startService(mbus);
 
     }
     
