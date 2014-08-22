@@ -23,8 +23,17 @@
         android:id="@+id/cnctBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignTop="@+id/editText1"
+        android:layout_alignTop="@+id/hostName"
         android:layout_centerHorizontal="true"
         android:text="@string/frag_net_cnct_btn" />
+
+    <Button
+        android:id="@+id/discBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_marginLeft="23dp"
+        android:layout_toRightOf="@+id/cnctBtn"
+        android:text="@string/frag_net_disc_btn" />
 
 </RelativeLayout>

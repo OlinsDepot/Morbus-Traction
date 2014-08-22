@@ -9,7 +9,7 @@ import android.util.Log;
 public class CommsThread extends Thread {
 	private final String TAG = getClass().getSimpleName();
 
-	private final Socket socket;
+	private final Socket mSocket;
 	private final InputStream inputStream;
 	private final OutputStream outputStream;
 	
@@ -21,14 +21,14 @@ public class CommsThread extends Thread {
 	 */
 	public CommsThread(Socket sock) {
 
-		socket = sock;
+		mSocket = sock;
 		InputStream tmpIn = null;
 		OutputStream tmpOut = null;
 
 		// create input and output stream objects to read and write socket.
 		try {
-			tmpIn = socket.getInputStream();
-			tmpOut = socket.getOutputStream();
+			tmpIn = mSocket.getInputStream();
+			tmpOut = mSocket.getOutputStream();
 		}
 		catch (IOException e) {
 			Log.d(TAG, e.getLocalizedMessage());
@@ -52,7 +52,7 @@ public class CommsThread extends Thread {
 			//Make a blocking call to read input stream and notify MORBUS stack on return.
 			try {
 				bytes = inputStream.read(buffer);				
-//				MorbusService.srvMsgHndlr.obtainMessage(0, bytes, -1, buffer).sendToTarget();
+				MbusService.rcvMsgHndlr.obtainMessage(0, bytes, -1, buffer).sendToTarget();
 			}
 			catch (IOException e) {
 				Log.d(TAG, e.getLocalizedMessage());
@@ -85,7 +85,7 @@ public class CommsThread extends Thread {
 	public void cancel()
 	{
 		try {
-			socket.close();
+			mSocket.close();
 		}
 		catch (IOException e) {
 			Log.d(TAG, e.getLocalizedMessage());

@@ -136,7 +136,7 @@ public class MainActivity extends Activity implements
 
 	
 	//
-	// Navigation Drawer Interface
+	// Navigation Interface
 	//
 	
 	/**
@@ -187,23 +187,14 @@ public class MainActivity extends Activity implements
         }
     }
 
-    /**
-     * Nav - Restore ActionBar after page change with updated title
-     */
-    public void restoreActionBar() {
-        ActionBar actionBar = getActionBar();
-        actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
-        actionBar.setDisplayShowTitleEnabled(true);
-        actionBar.setTitle(mTitle);
-    }
 
 
     //
-    // Options Menu Manager
+    // Action bar interface.
     //
-    
+
     /**
-     * Menu - onCreateOptionsMenu notification
+     * onCreateOptionsMenu notification
      */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -222,7 +213,17 @@ public class MainActivity extends Activity implements
     }
 
     /**
-     * Menu - on OptionsItemSelected notification
+     * Restore ActionBar after page change with updated title
+     */
+    public void restoreActionBar() {
+        ActionBar actionBar = getActionBar();
+        actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
+        actionBar.setDisplayShowTitleEnabled(true);
+        actionBar.setTitle(mTitle);
+    }
+
+    /**
+     * on OptionsItemSelected notification
      */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -235,26 +236,29 @@ public class MainActivity extends Activity implements
         }
         return super.onOptionsItemSelected(item);
     }
+
     
     //
-    // Server Page Interface
+    // Page Interface Methods
     //
+    
     /**
      * Server page listener.
      */
     @Override
     public void onServerChange(String srvrAddr, int srvrPort) {
 		 Intent mbus = new Intent(this, MbusService.class);
-		 startService(mbus);
+		 
+		 if (srvrAddr != null) {
+			 startService(mbus);
+		 }
+		 else {
+			 stopService(mbus);
+		 }
 
     }
     
 
-
-	//
-	// Throttle Interface
-	//
-	
 	/**
 	 * Throttle change listener
 	 */

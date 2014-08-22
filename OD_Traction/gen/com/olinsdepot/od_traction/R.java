@@ -54,8 +54,8 @@ public final class R {
         public static final int action_example=0x7f08000f;
         public static final int action_settings=0x7f08000e;
         public static final int cnctBtn=0x7f080006;
+        public static final int discBtn=0x7f080007;
         public static final int drawer_layout=0x7f080000;
-        public static final int editText1=0x7f080007;
         public static final int hostName=0x7f080005;
         public static final int main_container=0x7f080001;
         public static final int navigation_drawer=0x7f080002;
@@ -83,7 +83,8 @@ public final class R {
         public static final int app_name=0x7f050000;
         public static final int cab_view=0x7f05000d;
         public static final int frag_net_cnct_btn=0x7f05000f;
-        public static final int frag_net_srvr_field=0x7f050010;
+        public static final int frag_net_disc_btn=0x7f050010;
+        public static final int frag_net_srvr_field=0x7f050011;
         public static final int navigation_drawer_close=0x7f050006;
         public static final int navigation_drawer_open=0x7f050005;
         public static final int net_view=0x7f05000e;

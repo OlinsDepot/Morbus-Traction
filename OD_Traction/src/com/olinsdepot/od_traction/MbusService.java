@@ -9,6 +9,12 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Process;
 import android.util.Log;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
+
 import android.widget.Toast;
 
 
@@ -18,47 +24,82 @@ public class MbusService extends Service {
 	
 	private Looper mServiceLooper;
 	private ServiceHandler mServiceHandler;
+	private HandlerThread mServiceThread;
 	
-	// Handler that receives messages from the thread
+	private Socket MbusSrvSocket;
+	CommsThread commsThread;
+	
+
+
+	// Handler for startup message from the originating thread
 	private final class ServiceHandler extends Handler {
+	
+		//Constructor
 		public ServiceHandler(Looper looper) {
 			super(looper);
 		}
+		
 		@Override
 		public void handleMessage(Message msg) {
-			// Normally we would do some work here, like download a file.
-			//For this example, we jsut sleep for 5 seconds.
-			long endTime = System.currentTimeMillis() + 5*1000;
-			while (System.currentTimeMillis() < endTime) {
-				synchronized (this) {
-					try {
-						wait(endTime - System.currentTimeMillis());
-					}
-					catch (Exception e) {
-						// Do nothing here.
-					}
-				}
+			// Start comms thread and connect to server
+			try
+			{
+				// create a socket.
+				// TODO Pass server address and port from main in msg.
+				MbusSrvSocket = new Socket(InetAddress.getByName("192.168.0.43"), 2005);
+				commsThread = new CommsThread(MbusSrvSocket);
+				commsThread.start();				
 			}
-			// Stop the service using the startId, so that we do't stop
-			// the service in the middle of handling another job.
-			stopSelf(msg.arg1);
+			catch (UnknownHostException e)
+			{
+				Log.d(TAG, e.getLocalizedMessage());
+			}
+			catch (IOException e)
+			{
+				Log.d(TAG, e.getLocalizedMessage());
+			}
 		}
 	}
 	
+	
+	// used for updating the UI on the main activity
+	static Handler rcvMsgHndlr = new Handler()
+	{
+		@Override
+		public void handleMessage(Message msg)
+		{
+			int numOfBytesREceived = msg.arg1;
+			byte[] buffer = (byte[]) msg.obj;
+			
+			// convert the entire byte array to string
+			String strReceived = new String(buffer);
+			
+			// extract only the actual string received
+			strReceived = strReceived.substring(0, numOfBytesREceived);
+			
+			// display the text received
+			Log.i("rcvMsgHndlr", strReceived);
+		}
+	};
+
+	
+	// New MorBus service is being created.
 	@Override
 	public void onCreate() {
+		if (L) Log.i(TAG, "Create MBus Thread");
 		// Start up the thread running the service. Note that we create a 
 		// separate thread because the service normally runs in the process's
 		// main thread, which we don't want to block. We also make it
 		// background priority so CPU-intensive work will not disrupt our UI.
-		HandlerThread thread = new HandlerThread("ServiceStartArguments", Process.THREAD_PRIORITY_BACKGROUND);
-		thread.start();
+		mServiceThread = new HandlerThread("MorBusServiceStartup", Process.THREAD_PRIORITY_BACKGROUND);
+		mServiceThread.start();
 		
 		// Get the HandlerThread's Looper and use it for our Handler
-		mServiceLooper = thread.getLooper();
+		mServiceLooper = mServiceThread.getLooper();
 		mServiceHandler = new ServiceHandler(mServiceLooper);
 	}
 	
+	// MorBus service is starting.
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		if (L) Log.i(TAG, "Starting MBUS");
@@ -70,7 +111,7 @@ public class MbusService extends Service {
 		msg.arg1 = startId;
 		mServiceHandler.sendMessage(msg);
 		
-		// If we get killed, after retrurning from here, restart
+		// If we get killed, after returning from here, restart
 		return START_STICKY;
 	}
 	
@@ -80,10 +121,15 @@ public class MbusService extends Service {
 		return null;
 	}
 	
+	
+	// MorBus service is shutting down.
 	@Override
 	public void onDestroy() {
 		if (L) Log.i(TAG, "Stopping MBUS");
 		Toast.makeText(this,  "MORBUS service done",  Toast.LENGTH_SHORT).show();
+		commsThread.cancel();          // Close the socket
+		mServiceThread.quitSafely();   // Shut down the start message queue
+		super.onDestroy();
 	}
 
 }

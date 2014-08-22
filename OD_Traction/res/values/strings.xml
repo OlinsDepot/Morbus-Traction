@@ -21,5 +21,6 @@
     <string name="cab_view">Cab View</string>
     <string name="net_view">Net View</string>
     <string name="frag_net_cnct_btn">Connect</string>
+    <string name="frag_net_disc_btn">Disconnect</string>
     <string name="frag_net_srvr_field">Server name or IP address</string>
 </resources>

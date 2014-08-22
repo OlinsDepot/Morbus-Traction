@@ -59,17 +59,6 @@ public class NetFragment extends Fragment {
 		 return thisfrag;
 	 }
 
-	 /**
-	  * onClickListener for Connect Button
-	  * @param view
-	  */
-	 public void onClickConnect(View view) {
-		 String mSrvrAddr = "192.168.1.0";
-		 int mSrvrPort = 2005;
-		 netListener.onServerChange(mSrvrAddr, mSrvrPort);
-	     if (L) Log.i(TAG, "onClick Connect");
-		 
-		 }
 
 	/**
      * Life cycle methods for the NET fragment
@@ -113,13 +102,26 @@ public class NetFragment extends Fragment {
 
 		Button netCnctBtn = (Button) netFragView.findViewById(R.id.cnctBtn);
 		netCnctBtn.setOnClickListener(
-			new OnClickListener() {
+				new OnClickListener() {
 				@Override
 				public void onClick(final View thisView) {
 					//Pass View through to the handler so that findViewById
 					//can be used to get a handle on the fragments own views.
 				     if (L) Log.i(TAG, "onClick Connect");
-				     netListener.onServerChange(hostName.getText().toString(), 2000);
+				     netListener.onServerChange(hostName.getText().toString(), 2005);
+				}
+			}
+		);
+
+		Button netDiscBtn = (Button) netFragView.findViewById(R.id.discBtn);
+		netDiscBtn.setOnClickListener(
+			new OnClickListener() {
+				@Override
+				public void onClick(final View thisView) {
+					//Pass View through to the handler so that findViewById
+					//can be used to get a handle on the fragments own views.
+				     if (L) Log.i(TAG, "onClick Disconnect");
+				     netListener.onServerChange(null, 0);
 				}
 			}
 		);
