@@ -13,8 +13,6 @@ public class CommsThread extends Thread {
 	private final InputStream inputStream;
 	private final OutputStream outputStream;
 	
-
-
 	/**
 	 * Constructor for TCP Stream Object
 	 * @param sock - socket of target server.

@@ -7,60 +7,142 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
+import android.os.Messenger;
 import android.os.Process;
 import android.util.Log;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
+//import java.io.IOException;
+//import java.net.InetAddress;
+//import java.net.Socket;
+//import java.net.UnknownHostException;
 
 import android.widget.Toast;
 
-
+/**
+ * MorBus Service
+ * @author mhughes
+ *
+ */
 public class MbusService extends Service {
 	private final String TAG = this.getClass().getSimpleName();
 	private static final boolean L = true;
 	
-	private Looper mServiceLooper;
-	private ServiceHandler mServiceHandler;
-	private HandlerThread mServiceThread;
+	private HandlerThread mSrvcThread;
+	private Looper mSrvcLooper;
+	private ServiceHandler mSrvcHandler;
 	
-	private Socket MbusSrvSocket;
-	CommsThread commsThread;
+	//private Socket MbusSrvSocket;
+	//private CommsThread commsThread;
+
+	//private HandlerThread mClientThread;
+	//private Looper mClientLooper;
+	private ClientHandler mClientHandler = new ClientHandler();
+	final Messenger mMessenger = new Messenger(mClientHandler);
 	
+	// MorBus Service events
+	static final int THROTTLE_CHANGE = 1;
 
 
-	// Handler for startup message from the originating thread
+
+
+	//
+	// Service Lifecycle Methods
+	//
+	
+	/**
+	 *  New MorBus service  created.
+	 */
+	@Override
+	public void onCreate() {
+		if (L) Log.i(TAG, "Create MBus Service");
+		// Create thread to manage service and setup handler.
+		mSrvcThread = new HandlerThread("MorBusServiceStartup", Process.THREAD_PRIORITY_BACKGROUND);
+		mSrvcThread.start();
+		mSrvcLooper = mSrvcThread.getLooper();
+		mSrvcHandler = new ServiceHandler(mSrvcLooper);
+		
+	}
+	
+	/**
+	 *  MorBus service startup.
+	@Override
+	public int onStartCommand(Intent intent, int flags, int startId) {
+		if (L) Log.i(TAG, "Starting MBUS " + startId);
+		Toast.makeText(this,  "MORBUS service starting",  Toast.LENGTH_SHORT).show();
+		
+		//For each start request, send a message to start a job and deliver the
+		// start ID so we know which request we're stopping when we finish the job
+		Message msg = mSrvcHandler.obtainMessage();
+		msg.arg1 = startId;
+		mSrvcHandler.sendMessage(msg);
+		
+		// If we get killed, after returning from here, restart
+		return START_NOT_STICKY;
+	}
+	 */
+	
+	/**
+	 * MorBus service binder
+	 */
+	@Override
+	public IBinder onBind(Intent intent) {
+		// Bind with messenger
+		Log.d(TAG, "Binding");
+//		Toast.makeText(getApplicationContext(),  "binding", Toast.LENGTH_SHORT).show();
+		Message msg = mSrvcHandler.obtainMessage();
+		msg.arg1 = 1;
+		mSrvcHandler.sendMessage(msg);
+		
+		return mMessenger.getBinder();
+	}
+	
+	
+	/**
+	 *  MorBus service shutdown.
+	 */
+	@Override
+	public void onDestroy() {
+		if (L) Log.i(TAG, "Stopping MBUS");
+		Toast.makeText(this,  "MORBUS service done",  Toast.LENGTH_SHORT).show();
+//		commsThread.cancel();          // Close the socket
+		mSrvcThread.quitSafely();      // Shut down the start message queue
+		super.onDestroy();
+	}
+	
+	//
+	// Message handler threads
+	//
+	
+	/**
+	 *  Handler for startup message from the originating thread
+	 */
 	private final class ServiceHandler extends Handler {
 	
-		//Constructor
 		public ServiceHandler(Looper looper) {
 			super(looper);
 		}
 		
 		@Override
 		public void handleMessage(Message msg) {
-			// Start comms thread and connect to server
-			try
-			{
+			Log.i(TAG,"Start comms thread");
+			/**
+			try {
 				// create a socket.
 				// TODO Pass server address and port from main in msg.
 				MbusSrvSocket = new Socket(InetAddress.getByName("192.168.0.43"), 2005);
 				commsThread = new CommsThread(MbusSrvSocket);
 				commsThread.start();				
 			}
-			catch (UnknownHostException e)
-			{
+			catch (UnknownHostException e) {
 				Log.d(TAG, e.getLocalizedMessage());
 			}
-			catch (IOException e)
-			{
+			catch (IOException e) {
 				Log.d(TAG, e.getLocalizedMessage());
 			}
+			**/ //skip this for the moment while we get client/service interface working.
 		}
 	}
-	
+
 	
 	// used for updating the UI on the main activity
 	static Handler rcvMsgHndlr = new Handler()
@@ -81,55 +163,32 @@ public class MbusService extends Service {
 			Log.i("rcvMsgHndlr", strReceived);
 		}
 	};
-
 	
-	// New MorBus service is being created.
-	@Override
-	public void onCreate() {
-		if (L) Log.i(TAG, "Create MBus Thread");
-		// Start up the thread running the service. Note that we create a 
-		// separate thread because the service normally runs in the process's
-		// main thread, which we don't want to block. We also make it
-		// background priority so CPU-intensive work will not disrupt our UI.
-		mServiceThread = new HandlerThread("MorBusServiceStartup", Process.THREAD_PRIORITY_BACKGROUND);
-		mServiceThread.start();
+	
+	//
+	// MorBus service, Client side interface
+	//
+	
+	
+	/**
+	 * Handler for incoming messages from clients
+	 */
+	static class ClientHandler extends Handler {
 		
-		// Get the HandlerThread's Looper and use it for our Handler
-		mServiceLooper = mServiceThread.getLooper();
-		mServiceHandler = new ServiceHandler(mServiceLooper);
-	}
-	
-	// MorBus service is starting.
-	@Override
-	public int onStartCommand(Intent intent, int flags, int startId) {
-		if (L) Log.i(TAG, "Starting MBUS");
-		Toast.makeText(this,  "MORBUS service starting",  Toast.LENGTH_SHORT).show();
-		
-		//For each start request, send a message to start a job and deliver the
-		// start ID so we know which request we're stopping when we finish the job
-		Message msg = mServiceHandler.obtainMessage();
-		msg.arg1 = startId;
-		mServiceHandler.sendMessage(msg);
-		
-		// If we get killed, after returning from here, restart
-		return START_STICKY;
-	}
-	
-	@Override
-	public IBinder onBind(Intent intent) {
-		// We don't provide binding, so return null
-		return null;
+		@Override
+		public void handleMessage(Message msg) {
+			Log.d("ClientHandler", "Message Received" + msg.what);
+			
+			switch (msg.what) {
+				case THROTTLE_CHANGE:
+					Log.d("ClientHandler", "tID=" + msg.arg1 + "speed=" +msg.arg2);
+					break;
+				default:
+					super.handleMessage(msg);
+			}
+		}
 	}
 	
 	
-	// MorBus service is shutting down.
-	@Override
-	public void onDestroy() {
-		if (L) Log.i(TAG, "Stopping MBUS");
-		Toast.makeText(this,  "MORBUS service done",  Toast.LENGTH_SHORT).show();
-		commsThread.cancel();          // Close the socket
-		mServiceThread.quitSafely();   // Shut down the start message queue
-		super.onDestroy();
-	}
 
 }
