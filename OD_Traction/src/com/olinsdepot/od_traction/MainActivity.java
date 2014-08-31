@@ -50,7 +50,7 @@ public class MainActivity extends Activity implements
      * MorBus Service
      */
     private Messenger mService = null;
-    private boolean mBound;
+    private boolean mBound = false;
 
 
 	//
@@ -237,30 +237,7 @@ public class MainActivity extends Activity implements
 
     
     //
-    // MorBus service interface.
-    //
-    
-    /**
-     * Class for interacting with the main interface of the service.
-     */
-    private ServiceConnection mConnection = new ServiceConnection() {
-    	
-    	public void onServiceConnected(ComponentName className, IBinder service) {
-    		Log.d(TAG, "onServiceConnected");
-    		mService = new Messenger(service);
-    		mBound = true;
-    	}
-    	
-    	public void onServiceDisconnected(ComponentName className) {
-    		Log.d(TAG, "onServiceDisconnected");
-    		mService = null;
-    		mBound = false;
-    	}
-    };
-    
-    
-    //
-    // Application page interface
+    // Application page interfaces
     //
     
     /**
@@ -269,6 +246,9 @@ public class MainActivity extends Activity implements
     @Override
     public void onServerChange(String srvrAddr, int srvrPort) {
     	Log.d(TAG,"onServerChange");
+    	
+    	// Start up MorBus service on server with this IP
+    	// If the IP address is null, shutdown the service.
     	Intent mbusIntent = new Intent(this, MbusService.class);
 		 
 		if (!mBound) {
@@ -290,7 +270,6 @@ public class MainActivity extends Activity implements
         Toast.makeText(getApplicationContext(), "ID="+tID+" Speed="+speed, Toast.LENGTH_SHORT).show();
         if (!mBound) return;
         // Create and send a message to the service, using a supported 'what' value
-//        Message msg = Message.obtain(null, MbusService.MSG_SAY_HELLO, 0, 0);
         Message msg = Message.obtain(null, MbusService.THROTTLE_CHANGE, tID, speed);
         try {
             mService.send(msg);
@@ -299,5 +278,28 @@ public class MainActivity extends Activity implements
         }
 
 	}
+    
+    //
+    // MorBus service interface.
+    //
+    
+    /**
+     * Class for interacting with the main interface of the service.
+     */
+    private ServiceConnection mConnection = new ServiceConnection() {
+    	
+    	public void onServiceConnected(ComponentName className, IBinder service) {
+    		Log.d(TAG, "ServiceConnected - " + className);
+    		mService = new Messenger(service);
+    		mBound = true;
+    	}
+    	
+    	public void onServiceDisconnected(ComponentName className) {
+    		Log.d(TAG, "onServiceDisconnected - " + className);
+    		mService = null;
+    		mBound = false;
+    	}
+    };
+    
 
 }

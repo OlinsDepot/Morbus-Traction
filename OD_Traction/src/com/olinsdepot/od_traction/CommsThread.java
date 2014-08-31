@@ -23,6 +23,7 @@ public class CommsThread extends Thread {
 		InputStream tmpIn = null;
 		OutputStream tmpOut = null;
 
+		this.setName("CommsThread");
 		// create input and output stream objects to read and write socket.
 		try {
 			tmpIn = mSocket.getInputStream();
@@ -50,7 +51,7 @@ public class CommsThread extends Thread {
 			//Make a blocking call to read input stream and notify MORBUS stack on return.
 			try {
 				bytes = inputStream.read(buffer);				
-				MbusService.rcvMsgHndlr.obtainMessage(0, bytes, -1, buffer).sendToTarget();
+				MbusService.srvrMsgRcv.obtainMessage(0, bytes, -1, buffer).sendToTarget();
 			}
 			catch (IOException e) {
 				Log.d(TAG, e.getLocalizedMessage());
