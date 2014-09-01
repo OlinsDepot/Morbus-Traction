@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" >
+
+    <EditText
+        android:id="@+id/dcdrAdr1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentLeft="true"
+        android:ems="10"
+        android:inputType="number" >
+
+        <requestFocus />
+    </EditText>
+    
+    <ToggleButton
+        android:id="@+id/dcdrSel1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/dcdrAdr1"
+        android:layout_marginLeft="27dp"
+        android:layout_toRightOf="@+id/dcdrAdr1"
+        android:text="Select Decoder"
+        android:textOff="SEL"
+        android:textOn="RLSE" />
+    
+    <EditText
+        android:id="@+id/dcdrAdr2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/dcdrAdr1"
+        android:ems="10"
+        android:inputType="number" />
+
+    <ToggleButton
+        android:id="@+id/dcdrSel2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/dcdrAdr2"
+        android:layout_marginLeft="27dp"
+        android:layout_toRightOf="@+id/dcdrAdr2"
+        android:text="Select Decoder"
+        android:textOff="SEL"
+        android:textOn="RLSE" />
+
+</RelativeLayout>

@@ -48,10 +48,13 @@ public class MbusService extends Service {
 	public static final int EMRG_STOP = 3;
 	public static final int THROTTLE_CHANGE = 4;
 	public static final int KEEP_ALIVE = 5;
+	public static final int REG_DECODER = 6;
 	
 	static final int UPDATE_INTERVAL = 50000;
 	private Timer timer = new Timer();
 	
+	private DCCencoder regDecoders[];
+
 
 	//
 	// Service life cycle call backs
@@ -71,23 +74,6 @@ public class MbusService extends Service {
 		
 	}
 	
-	/**
-	 *  MorBus service startup.
-	@Override
-	public int onStartCommand(Intent intent, int flags, int startId) {
-		if (L) Log.i(TAG, "Starting MBUS " + startId);
-		Toast.makeText(this,  "MORBUS service starting",  Toast.LENGTH_SHORT).show();
-		
-		//For each start request, send a message to start a job and deliver the
-		// start ID so we know which request we're stopping when we finish the job
-		Message msg = mSrvcHandler.obtainMessage();
-		msg.arg1 = startId;
-		mSrvcHandler.sendMessage(msg);
-		
-		// If we get killed, after returning from here, restart
-		return START_NOT_STICKY;
-	}
-	 */
 	
 	/**
 	 * MorBus service binder
@@ -163,7 +149,12 @@ public class MbusService extends Service {
 				mSrvrLooper = mSrvrThread.getLooper();
 				mSrvrHandler = new SrvrMsgSnd(mSrvrLooper);
 				
+				//Start a thread to send keep alive commands every 50 seconds
 				KeepAliveThread();
+				
+				//Create array of to hold DCC encoders registered to each throttle. (6 max);
+				regDecoders = new DCCencoder[6];
+
 
 				Toast.makeText(getApplicationContext(), "Mbus Server Connected", Toast.LENGTH_SHORT).show();
 
@@ -229,6 +220,7 @@ public class MbusService extends Service {
 	private final class SrvrMsgSnd extends Handler {
 		
 		private byte serverBuf[];
+		
 		public SrvrMsgSnd(Looper looper) {
 			super(looper);
 		}
@@ -238,36 +230,18 @@ public class MbusService extends Service {
 			
 			switch (msg.what) {
 			
+			case REG_DECODER:
+				//Register a target decoder to a throttle.
+				regDecoders[msg.arg1] = new DCCencoder(msg.arg2);
+				break;
+			
 			case THROTTLE_CHANGE:
-				byte speed = (byte)((msg.arg2 >>>3) & (0x1F));
-				
 				if (L) Log.i("SrvrMsgSnd", "tID=" + msg.arg1 + "speed=" +msg.arg2);
 				
-				if (msg.arg1 == 0) {
-					serverBuf = new byte[9];
-					serverBuf[0] = (byte) 0x07;
-					serverBuf[1] = (byte) 0x03;
-					serverBuf[2] = (byte) 0x00;
-					serverBuf[3] = (byte) 0x19;
-					serverBuf[4] = (byte) 0x00;
-					serverBuf[5] = (byte) 0x00;
-					serverBuf[6] = (byte) 0x80;
-					serverBuf[7] = (byte) 0x16;
-					serverBuf[8] = (byte) ((byte) 0x60 | speed);
-				}
-				else {
-					serverBuf = new byte[9];
-					serverBuf[0] = (byte) 0x07;
-					serverBuf[1] = (byte) 0x03;
-					serverBuf[2] = (byte) 0x00;
-					serverBuf[3] = (byte) 0x19;
-					serverBuf[4] = (byte) 0x00;
-					serverBuf[5] = (byte) 0x00;
-					serverBuf[6] = (byte) 0x80;
-					serverBuf[7] = (byte) 0x14;
-					serverBuf[8] = (byte) ((byte) 0x60 | speed);
-				}
+				serverBuf = regDecoders[msg.arg1].DCCspeed(msg.arg2);
+				
 				commsThread.write(serverBuf);
+				
 				break;
 				
 			case KEEP_ALIVE:
@@ -317,5 +291,40 @@ public class MbusService extends Service {
 				
 			}
 		}, 0, UPDATE_INTERVAL);
+	}
+	
+	/**
+	 * DCC command encoder
+	 * @param command
+	 */
+	
+	private class DCCencoder {
+		private byte dcdrAdr;
+		private byte encoderBuf[];
+		
+		//Constructor sets decoder address
+		DCCencoder (int newDcdr) {
+			this.dcdrAdr = (byte) (newDcdr & (0xff));
+		}
+		
+		//Method: encode speed/dir command
+		byte [] DCCspeed (int speed) {
+			
+			byte throttleStep = (byte)((speed >>>3) & (0x1F));
+
+			encoderBuf = new byte[9];
+			encoderBuf[0] = (byte) 0x07;
+			encoderBuf[1] = (byte) 0x03;
+			encoderBuf[2] = (byte) 0x00;
+			encoderBuf[3] = (byte) 0x19;
+			encoderBuf[4] = (byte) 0x00;
+			encoderBuf[5] = (byte) 0x00;
+			encoderBuf[6] = (byte) 0x80;
+			encoderBuf[7] = this.dcdrAdr;
+			encoderBuf[8] = (byte) ((byte) 0x60 | throttleStep);
+			
+			return encoderBuf;
+			
+		}
 	}
 }

@@ -44,16 +44,20 @@ public final class R {
         public static final int seek_thumb_selected=0x7f020007;
     }
     public static final class id {
-        public static final int BTNFWD=0x7f08000d;
-        public static final int BTNREV=0x7f08000c;
-        public static final int BTNSTOP=0x7f08000b;
+        public static final int BTNFWD=0x7f080011;
+        public static final int BTNREV=0x7f080010;
+        public static final int BTNSTOP=0x7f08000f;
         public static final int LEFT_THROTTLE_FRAME=0x7f080003;
         public static final int RIGHT_THROTTLE_FRAME=0x7f080004;
-        public static final int Throttle=0x7f08000a;
-        public static final int ThrottleFragment=0x7f080009;
-        public static final int action_example=0x7f08000f;
-        public static final int action_settings=0x7f08000e;
+        public static final int Throttle=0x7f08000e;
+        public static final int ThrottleFragment=0x7f08000d;
+        public static final int action_example=0x7f080013;
+        public static final int action_settings=0x7f080012;
         public static final int cnctBtn=0x7f080006;
+        public static final int dcdrAdr1=0x7f080009;
+        public static final int dcdrAdr2=0x7f08000b;
+        public static final int dcdrSel1=0x7f08000a;
+        public static final int dcdrSel2=0x7f08000c;
         public static final int discBtn=0x7f080007;
         public static final int drawer_layout=0x7f080000;
         public static final int hostName=0x7f080005;
@@ -67,7 +71,8 @@ public final class R {
         public static final int fragment_navigation_drawer=0x7f030002;
         public static final int fragment_net=0x7f030003;
         public static final int fragment_placeholder=0x7f030004;
-        public static final int fragment_throttle=0x7f030005;
+        public static final int fragment_roster=0x7f030005;
+        public static final int fragment_throttle=0x7f030006;
     }
     public static final class menu {
         public static final int global=0x7f070000;

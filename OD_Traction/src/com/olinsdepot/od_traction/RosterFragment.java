@@ -2,34 +2,31 @@ package com.olinsdepot.od_traction;
 
 import android.app.Activity;
 import android.app.Fragment;
+//import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.View.OnClickListener;
-import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.ToggleButton;
 
 /**
- * The Roster fragment gets the decoder address and characteristics from user.
+ * The Network fragment gets network address of the Morbus server from user.
  */
-public class NetFragment extends Fragment {
-	
-	/**
-	 * Logging - String for the class name, Logging on/off flag.
-	 */
+public class RosterFragment extends Fragment {
 	private final String TAG = getClass().getSimpleName();
 	private static final boolean L = true;
 
 	// Container Activity must implement this interface
-	public interface OnServerChangeListener{
+	public interface OnRosterChangeListener{
 		/**
 		 * Called when User hits the connect button with a valid IP
 		 */
-		public void onServerChange(String mSrvr, int mPort);
+		public void onRosterChange(int tID, int dcdrAdr);
 	}
-	private OnServerChangeListener netListener;
+	private OnRosterChangeListener rosterListener;
 
 	/**
 	 * Link back to Main activity, set when fragment is attached.
@@ -40,21 +37,22 @@ public class NetFragment extends Fragment {
 	 /**
 	  * Fragment characteristic, an example
 	  */
-	 private static final String ARG_IPADR = "IP_ADR";
+//	 private static final int dcdrAdr = 0;
 	 
 	 /**
 	  * Null constructor for this fragment
 	  */
-	 public NetFragment() { }
+	 public RosterFragment() { }
 	 
 	 /**
-	  * Returns a new instance of the NET view fragment
+	  * Returns a new instance of the ROSTER view fragment
 	  */
-	 public static NetFragment newInstance() {
-		 NetFragment thisfrag = new NetFragment();
-		 Bundle args = new Bundle();
-		 args.putString(ARG_IPADR, "192.168.1.0");
-		 thisfrag.setArguments(args);
+	 public static RosterFragment newInstance() {
+		 RosterFragment thisfrag = new RosterFragment();
+		 Bundle dcdr = new Bundle();
+		 dcdr.putInt("Throttle_ID", 0);
+		 dcdr.putInt("DCDR_ADDRESS", 0);
+		 thisfrag.setArguments(dcdr);
 		 return thisfrag;
 	 }
 
@@ -71,7 +69,7 @@ public class NetFragment extends Fragment {
         
         // Open interface to container fragment.
         try {
-            netListener = (OnServerChangeListener) activity;
+            rosterListener = (OnRosterChangeListener) activity;
         } catch (ClassCastException e) {
             throw new ClassCastException(activity.toString() + " must implement Server Change Listener");
         }
@@ -95,37 +93,47 @@ public class NetFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         if (L) Log.i(TAG, "onCreateView");
 
-        View netFragView = inflater.inflate(R.layout.fragment_net, container, false);
+        View rosterFragView = inflater.inflate(R.layout.fragment_roster, container, false);
         
-        final EditText hostName = (EditText) netFragView.findViewById(R.id.hostName);
+        final EditText dcdrAdr1 = (EditText) rosterFragView.findViewById(R.id.dcdrAdr1);
 
-		Button netCnctBtn = (Button) netFragView.findViewById(R.id.cnctBtn);
-		netCnctBtn.setOnClickListener(
-				new OnClickListener() {
+		ToggleButton dcdrSel1Btn = (ToggleButton) rosterFragView.findViewById(R.id.dcdrSel1);
+		dcdrSel1Btn.setOnCheckedChangeListener(
+			new CompoundButton.OnCheckedChangeListener() {
 				@Override
-				public void onClick(final View thisView) {
-					//Pass View through to the handler so that findViewById
-					//can be used to get a handle on the fragments own views.
+				public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 				     if (L) Log.i(TAG, "onClick Connect");
-				     netListener.onServerChange(hostName.getText().toString(), 2005);
+				     
+				     if (isChecked) {
+				    	 rosterListener.onRosterChange(0, Integer.valueOf(dcdrAdr1.getText().toString()));
+				     }
+				     else {
+				    	 rosterListener.onRosterChange(0, 0);
+				     }
 				}
 			}
 		);
 
-		Button netDiscBtn = (Button) netFragView.findViewById(R.id.discBtn);
-		netDiscBtn.setOnClickListener(
-			new OnClickListener() {
+		final EditText dcdrAdr2 = (EditText) rosterFragView.findViewById(R.id.dcdrAdr2);
+
+		ToggleButton dcdrSel2Btn = (ToggleButton) rosterFragView.findViewById(R.id.dcdrSel2);
+		dcdrSel2Btn.setOnCheckedChangeListener(
+			new CompoundButton.OnCheckedChangeListener() {
 				@Override
-				public void onClick(final View thisView) {
-					//Pass View through to the handler so that findViewById
-					//can be used to get a handle on the fragments own views.
-				     if (L) Log.i(TAG, "onClick Disconnect");
-				     netListener.onServerChange(null, 0);
+				public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+				     if (L) Log.i(TAG, "onClick Connect");
+				     
+				     if (isChecked) {
+				    	 rosterListener.onRosterChange(1, Integer.valueOf(dcdrAdr2.getText().toString()));
+				     }
+				     else {
+				    	 rosterListener.onRosterChange(1, 0);
+				     }
 				}
 			}
 		);
                 
-        return netFragView;
+        return rosterFragView;
     }
 
     

@@ -32,6 +32,7 @@ import android.support.v4.widget.DrawerLayout;
 public class MainActivity extends Activity implements
 		NavigationDrawerFragment.NavigationDrawerCallbacks,
 		NetFragment.OnServerChangeListener,
+		RosterFragment.OnRosterChangeListener,
         ThrottleFragment.OnThrottleChangeListener {
 	
 	/**
@@ -134,7 +135,7 @@ public class MainActivity extends Activity implements
 
 	
 	//
-	// Navigation Interface
+	// Page navigation Interface
 	//
 	
 	/**
@@ -150,7 +151,7 @@ public class MainActivity extends Activity implements
 	            .commit();
 	    		break;
 	    	case 1:
-	            SetMainView.replace(R.id.main_container, PlaceholderFragment.newInstance(2))
+	            SetMainView.replace(R.id.main_container, RosterFragment.newInstance())
 	            .commit();
 	    		break;
 	    	case 2:
@@ -184,7 +185,6 @@ public class MainActivity extends Activity implements
                 break;
         }
     }
-
 
 
     //
@@ -262,13 +262,34 @@ public class MainActivity extends Activity implements
     }
 
 	/**
+	 * Roster change listener
+	 */
+	public void onRosterChange(int tID, int dcdrAdr) {
+        Toast.makeText(getApplicationContext(), "ID="+tID+" Decoder="+dcdrAdr, Toast.LENGTH_SHORT).show();
+
+        // If no Morbus service connected, do nothing.
+        if (!mBound) return;
+        
+        // Create and send a message to the service, using a supported 'what' value
+        Message msg = Message.obtain(null, MbusService.REG_DECODER, tID, dcdrAdr);
+        try {
+            mService.send(msg);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+		
+	}
+
+    /**
 	 * Throttle change listener
 	 */
 	@Override
 	public void onThrottleChange(int tID, int speed) {
-		// TODO Auto-generated method stub
         Toast.makeText(getApplicationContext(), "ID="+tID+" Speed="+speed, Toast.LENGTH_SHORT).show();
+
+        // If no Morbus service connected, do nothing.
         if (!mBound) return;
+        
         // Create and send a message to the service, using a supported 'what' value
         Message msg = Message.obtain(null, MbusService.THROTTLE_CHANGE, tID, speed);
         try {
