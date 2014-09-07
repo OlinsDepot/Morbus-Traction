@@ -1,4 +1,4 @@
-package com.olinsdepot.od_traction;
+package com.olinsdepot.mbus_srvc;
 
 import android.app.Service;
 import android.content.Intent;
@@ -9,6 +9,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.Process;
+import android.os.RemoteException;
 import android.util.Log;
 
 import java.io.IOException;
@@ -17,6 +18,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Timer;
 import java.util.TimerTask;
+
 
 import android.widget.Toast;
 
@@ -35,14 +37,16 @@ public class MbusService extends Service {
 	
 	private Socket MbusSrvSocket;
 	private CommsThread commsThread;
-	static SrvrMsgRcv srvrMsgRcv = new SrvrMsgRcv();
+	static MsgFromSrvr srvrMsgRcv = new MsgFromSrvr();
 	
 	private HandlerThread mSrvrThread;
 	private Looper mSrvrLooper;
-	private static SrvrMsgSnd mSrvrHandler;
+	private static MsgToSrvr mMsgToSrvr;
 
-	private final Messenger mClientMsgRcv = new Messenger(new ClientMsgRcv());
+	private final Messenger mMsgFromClient = new Messenger(new MsgFromClient());
+	private static Messenger mMsgToClient;
 	
+	public static final int REGISTER = 7;
 	public static final int POWER_ON = 1;
 	public static final int POWER_OFF = 2;
 	public static final int EMRG_STOP = 3;
@@ -86,7 +90,7 @@ public class MbusService extends Service {
 		msg.what = 1;
 		mSrvcHandler.sendMessage(msg);
 		
-		return mClientMsgRcv.getBinder();
+		return mMsgFromClient.getBinder();
 	}
 	
 	
@@ -147,7 +151,7 @@ public class MbusService extends Service {
 				mSrvrThread = new HandlerThread("SrvrMsgSnd", Process.THREAD_PRIORITY_BACKGROUND);
 				mSrvrThread.start();
 				mSrvrLooper = mSrvrThread.getLooper();
-				mSrvrHandler = new SrvrMsgSnd(mSrvrLooper);
+				mMsgToSrvr = new MsgToSrvr(mSrvrLooper);
 				
 				//Start a thread to send keep alive commands every 50 seconds
 				KeepAliveThread();
@@ -176,25 +180,30 @@ public class MbusService extends Service {
 
 	
 	/**
-	 * Server message receiver: Parses server response and generates an event
+	 * Message from Server: Parses server message and generates events
 	 * to be sent to the client.
 	 * 
 	 * @param msg - Message containing byte count and byte data sent from server.
 	 */
-	static class SrvrMsgRcv extends Handler {
+	static class MsgFromSrvr extends Handler {
 		@Override
 		public void handleMessage(Message msg)
 		{
 			int numOfBytesReceived = msg.arg1;
 			byte[] buffer = (byte[]) msg.obj;
 			
-			// convert the entire byte array to string
-			//String strReceived = new String(buffer);
-			
-			// extract only the actual string received
-			//strReceived = strReceived.substring(0, numOfBytesREceived);
+			// extract only the actual bytes received
 			byte[] packet = java.util.Arrays.copyOfRange(buffer, 0, numOfBytesReceived);
 			
+			// On ID response, send connected message.
+			if (packet[0] ==2) {
+	    		Message msgClient = Message.obtain(null, 2);
+	    		try {
+	    			mMsgToClient.send(msgClient);
+	    		} catch (RemoteException e) {
+	    			e.printStackTrace();
+	    		}
+			}
 			// display the text received
 			if (L) Log.i("SrvrMsgRcv", bytesToHex(packet));
 		}
@@ -212,21 +221,23 @@ public class MbusService extends Service {
 	}
 	
 	/**
-	 *  Server message sender: Parses event from client and generates a
+	 *  Message to Server: Parses event from client and generates a
 	 *  command packet to send to the server.
 	 *  
 	 *  @param msg - Message from Main containing an MBus event.
 	 */
-	private final class SrvrMsgSnd extends Handler {
+	private final class MsgToSrvr extends Handler {
 		
 		private byte serverBuf[];
 		
-		public SrvrMsgSnd(Looper looper) {
+		public MsgToSrvr(Looper looper) {
 			super(looper);
 		}
 		
 		@Override
 		public void handleMessage(Message msg) {
+			
+			Log.i(TAG, "Message type " + msg.what);
 			
 			switch (msg.what) {
 			
@@ -261,19 +272,27 @@ public class MbusService extends Service {
 	}
 
 	/**
-	 * Client message receiver. Bound to main thread. Passes client events from
+	 * Handle messages from client UI. Bound to main thread. Passes client events from
 	 * Main thread to MBus service to be parsed into MBus commands and sent.
 	 * 
 	 * @param msg - Message containing an event for Mbus service to process.
 	 */
-	static class ClientMsgRcv extends Handler {
+	static class MsgFromClient extends Handler {
 		
 		@Override
 		public void handleMessage(Message msg) {
 			if (L) Log.i("ClientHandler", "Message Received = " + msg.what);
-			Message mMsg = mSrvrHandler.obtainMessage(msg.what,msg.arg1,msg.arg2);
-			mSrvrHandler.sendMessage(mMsg);
-			//TODO if mSrvrHandler not running just do a call to super.handleMessage(msg)
+
+			if (msg.what == REGISTER) {
+				mMsgToClient = msg.replyTo;
+				
+
+			}
+			else {
+				Message mMsg = mMsgToSrvr.obtainMessage(msg.what,msg.arg1,msg.arg2);
+				mMsgToSrvr.sendMessage(mMsg);
+				//TODO if mSrvrHandler not running just do a call to super.handleMessage(msg)
+			}
 		}
 	}
 	
@@ -286,45 +305,11 @@ public class MbusService extends Service {
 			public void run() {
 				Log.d(TAG, "KeepAliveTask");
 				//TODO send keepalive command here.
-				Message mMsg = mSrvrHandler.obtainMessage(KEEP_ALIVE);
-				mSrvrHandler.sendMessage(mMsg);
+				Message mMsg = mMsgToSrvr.obtainMessage(KEEP_ALIVE);
+				mMsgToSrvr.sendMessage(mMsg);
 				
 			}
 		}, 0, UPDATE_INTERVAL);
 	}
 	
-	/**
-	 * DCC command encoder
-	 * @param command
-	 */
-	
-	private class DCCencoder {
-		private byte dcdrAdr;
-		private byte encoderBuf[];
-		
-		//Constructor sets decoder address
-		DCCencoder (int newDcdr) {
-			this.dcdrAdr = (byte) (newDcdr & (0xff));
-		}
-		
-		//Method: encode speed/dir command
-		byte [] DCCspeed (int speed) {
-			
-			byte throttleStep = (byte)((speed >>>3) & (0x1F));
-
-			encoderBuf = new byte[9];
-			encoderBuf[0] = (byte) 0x07;
-			encoderBuf[1] = (byte) 0x03;
-			encoderBuf[2] = (byte) 0x00;
-			encoderBuf[3] = (byte) 0x19;
-			encoderBuf[4] = (byte) 0x00;
-			encoderBuf[5] = (byte) 0x00;
-			encoderBuf[6] = (byte) 0x80;
-			encoderBuf[7] = this.dcdrAdr;
-			encoderBuf[8] = (byte) ((byte) 0x60 | throttleStep);
-			
-			return encoderBuf;
-			
-		}
-	}
 }

@@ -1,5 +1,7 @@
 package com.olinsdepot.od_traction;
 
+import com.olinsdepot.mbus_srvc.MbusService;
+
 import android.app.Activity;
 import android.app.ActionBar;
 import android.app.FragmentTransaction;
@@ -11,6 +13,7 @@ import android.content.ServiceConnection;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
@@ -48,10 +51,11 @@ public class MainActivity extends Activity implements
     private CharSequence mTitle;
     
     /**
-     * MorBus Service
+     * Rail Service - Interface to layout server
      */
-    private Messenger mService = null;
-    private boolean mBound = false;
+    private Messenger mRailSrvc = null;
+    private boolean mRailSrvcBound = false;
+	private final Messenger mRailSrvcMsgToClient = new Messenger(new MsgToClient());
 
 
 	//
@@ -139,7 +143,7 @@ public class MainActivity extends Activity implements
 	//
 	
 	/**
-	 * Nav - Notification that an item has been selected from the nav drawer.
+	 * Nav Item Selected: Notification that an item has been selected from the nav drawer.
 	 */
     @Override
     public void onNavigationDrawerItemSelected(int position) {
@@ -166,8 +170,8 @@ public class MainActivity extends Activity implements
     }
 
     /**
-     * Nav - Set page title. Called when new page is attached.
-     * @param number
+     * Nav Section Attached: Called when new page is attached. Sets Page title to show in action bar.
+     * @param number - Page number
      */
     public void onSectionAttached(int number) {
         switch (number) {
@@ -241,7 +245,7 @@ public class MainActivity extends Activity implements
     //
     
     /**
-     * Server page listener.
+     * Server change listener.
      */
     @Override
     public void onServerChange(String srvrAddr, int srvrPort) {
@@ -251,12 +255,12 @@ public class MainActivity extends Activity implements
     	// If the IP address is null, shutdown the service.
     	Intent mbusIntent = new Intent(this, MbusService.class);
 		 
-		if (!mBound) {
+		if (!mRailSrvcBound) {
 			bindService(mbusIntent, mConnection, Context.BIND_AUTO_CREATE);
 		 }
 		 else {
 	            unbindService(mConnection);
-	            mBound = false;
+	            mRailSrvcBound = false;
 		 }
 
     }
@@ -268,12 +272,12 @@ public class MainActivity extends Activity implements
         Toast.makeText(getApplicationContext(), "ID="+tID+" Decoder="+dcdrAdr, Toast.LENGTH_SHORT).show();
 
         // If no Morbus service connected, do nothing.
-        if (!mBound) return;
+        if (!mRailSrvcBound) return;
         
         // Create and send a message to the service, using a supported 'what' value
         Message msg = Message.obtain(null, MbusService.REG_DECODER, tID, dcdrAdr);
         try {
-            mService.send(msg);
+            mRailSrvc.send(msg);
         } catch (RemoteException e) {
             e.printStackTrace();
         }
@@ -288,12 +292,12 @@ public class MainActivity extends Activity implements
         Toast.makeText(getApplicationContext(), "ID="+tID+" Speed="+speed, Toast.LENGTH_SHORT).show();
 
         // If no Morbus service connected, do nothing.
-        if (!mBound) return;
+        if (!mRailSrvcBound) return;
         
         // Create and send a message to the service, using a supported 'what' value
         Message msg = Message.obtain(null, MbusService.THROTTLE_CHANGE, tID, speed);
         try {
-            mService.send(msg);
+            mRailSrvc.send(msg);
         } catch (RemoteException e) {
             e.printStackTrace();
         }
@@ -310,17 +314,41 @@ public class MainActivity extends Activity implements
     private ServiceConnection mConnection = new ServiceConnection() {
     	
     	public void onServiceConnected(ComponentName className, IBinder service) {
-    		Log.d(TAG, "ServiceConnected - " + className);
-    		mService = new Messenger(service);
-    		mBound = true;
+    		Log.d(TAG, "onServiceConnected - " + className);
+    		
+    		// Connect the Morbus service's message handler.
+    		mRailSrvc = new Messenger(service);
+    		
+    		// Send the MorBus service the client's message handler.
+    		Message msg = Message.obtain(null, MbusService.REGISTER, 0, 0);
+    		msg.replyTo  = mRailSrvcMsgToClient;
+            try {
+                mRailSrvc.send(msg);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+    		mRailSrvcBound = true;
     	}
     	
     	public void onServiceDisconnected(ComponentName className) {
     		Log.d(TAG, "onServiceDisconnected - " + className);
-    		mService = null;
-    		mBound = false;
+    		mRailSrvc = null;
+    		mRailSrvcBound = false;
     	}
     };
     
+	/**
+	 * Client message receiver. Bound to main thread. Passes client events from
+	 * MBus service to Main thread to be parsed into MBus commands and sent.
+	 * 
+	 * @param msg - Message containing an event for Mbus service to process.
+	 */
+	static class MsgToClient extends Handler {
+		@Override
+		public void handleMessage(Message msg) {
+			if (L) Log.i("ClientMsgSnd", "Event Received = " + msg.what);
+			//TODO Handle server event.
+		}
+	}
 
 }
