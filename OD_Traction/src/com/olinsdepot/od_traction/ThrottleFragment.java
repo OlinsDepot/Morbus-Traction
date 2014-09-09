@@ -166,14 +166,14 @@ public class ThrottleFragment extends Fragment {
 	@Override
 	public void onActivityCreated(Bundle saved) {
 		super.onActivityCreated(saved);
-        if (L) Log.i(TAG, "onPause");
+        if (L) Log.i(TAG, "onActivityCreated");
 	}
 	
 	// On Start
 	@Override
 	public void onStart() {
 		super.onStart();
-        if (L) Log.i(TAG, "onPause");
+        if (L) Log.i(TAG, "onStart");
 	}
 	
 	// On Resume method

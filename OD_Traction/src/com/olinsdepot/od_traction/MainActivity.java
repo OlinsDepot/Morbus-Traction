@@ -1,7 +1,5 @@
 package com.olinsdepot.od_traction;
 
-import com.olinsdepot.mbus_srvc.MbusService;
-
 import android.app.Activity;
 import android.app.ActionBar;
 import android.app.FragmentTransaction;
@@ -25,6 +23,8 @@ import android.view.MenuItem;
 
 import android.widget.Toast;
 import android.support.v4.widget.DrawerLayout;
+
+import com.olinsdepot.mbus_srvc.MbusService;
 
 
 /**
@@ -253,13 +253,13 @@ public class MainActivity extends Activity implements
     	
     	// Start up MorBus service on server with this IP
     	// If the IP address is null, shutdown the service.
-    	Intent mbusIntent = new Intent(this, MbusService.class);
+    	Intent mbusIntent = new Intent(this, com.olinsdepot.mbus_srvc.MbusService.class);
 		 
 		if (!mRailSrvcBound) {
-			bindService(mbusIntent, mConnection, Context.BIND_AUTO_CREATE);
+			bindService(mbusIntent, mRailSrvcConnection, Context.BIND_AUTO_CREATE);
 		 }
 		 else {
-	            unbindService(mConnection);
+	            unbindService(mRailSrvcConnection);
 	            mRailSrvcBound = false;
 		 }
 
@@ -311,7 +311,7 @@ public class MainActivity extends Activity implements
     /**
      * Class for interacting with the main interface of the service.
      */
-    private ServiceConnection mConnection = new ServiceConnection() {
+    private ServiceConnection mRailSrvcConnection = new ServiceConnection() {
     	
     	public void onServiceConnected(ComponentName className, IBinder service) {
     		Log.d(TAG, "onServiceConnected - " + className);

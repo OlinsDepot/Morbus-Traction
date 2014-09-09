@@ -6,21 +6,18 @@
     android:background="#cccc"
     android:orientation="vertical">
 
-		<com.olinsdepot.od_traction.VerticalSeekBar
+    	<com.olinsdepot.od_traction.VerticalSeekBar
 		    android:id="@+id/Throttle"
 		    android:layout_width="26dp"
 		    android:layout_height="fill_parent"
-		    android:layout_marginLeft="11dp"
-		    android:layout_marginRight="11dp"
-		    android:layout_marginTop="4dp"
-		    android:layout_marginBottom="4dp"
+		    android:layout_alignLeft="@+id/BTNSTOP"
+		    android:layout_alignRight="@+id/BTNSTOP"
 		    android:layout_below="@+id/BTNSTOP"
-		    android:layout_centerHorizontal="true"
 		    android:clickable="true"
 		    android:longClickable="false"
 		    android:progressDrawable="@drawable/progress_vertical"
 		    android:thumb="@drawable/seek_thumb" />
-
+    
 		<Button
 		    android:id="@+id/BTNREV"
 		    style="?android:attr/buttonStyleSmall"
