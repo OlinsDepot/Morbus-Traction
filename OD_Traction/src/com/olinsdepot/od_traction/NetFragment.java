@@ -7,40 +7,50 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.View.OnClickListener;
-import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.ToggleButton;
 
 /**
  * The Roster fragment gets the decoder address and characteristics from user.
  */
 public class NetFragment extends Fragment {
 	
-	/**
-	 * Logging - String for the class name, Logging on/off flag.
-	 */
+	//Logging
 	private final String TAG = getClass().getSimpleName();
 	private static final boolean L = true;
 
 	// Container Activity must implement this interface
 	public interface OnServerChangeListener{
-		/**
-		 * Called when User hits the connect button with a valid IP
-		 */
-		public void onServerChange(String mSrvr, int mPort);
+		public void onServerChange(Bundle srvrIP);
 	}
+
+	/**
+	 * Called when User hits the connect button with a valid IP
+	 */
 	private OnServerChangeListener netListener;
 
 	/**
 	 * Link back to Main activity, set when fragment is attached.
 	 */
-	MainActivity mActivity;
+	private MainActivity mActivity;
 	
-	 
+	private EditText mSrvrName;
+    private EditText mHostName;
+    private EditText mHostPort;    
+	private ToggleButton mSrvrCnctBtn;
+
 	 /**
-	  * Fragment characteristic, an example
+	  * Fragment State
 	  */
-	 private static final String ARG_IPADR = "IP_ADR";
+	 private static Bundle srvrIP = null;
+	 private static boolean btnState = false;
+	 
+	 private static final String NAME = "SRV_NAME";
+	 private static final String ADDR = "IP_ADR";
+	 private static final String PORT = "IP_PORT";
+	 private static final String STATE = "IP_CNCT";
+
 	 
 	 /**
 	  * Null constructor for this fragment
@@ -52,18 +62,18 @@ public class NetFragment extends Fragment {
 	  */
 	 public static NetFragment newInstance() {
 		 NetFragment thisfrag = new NetFragment();
-		 Bundle args = new Bundle();
-		 args.putString(ARG_IPADR, "192.168.1.0");
-		 thisfrag.setArguments(args);
 		 return thisfrag;
 	 }
 
 
-	/**
-     * Life cycle methods for the NET fragment
-     */
+	//
+    // Life cycle methods for the NET fragment
+     //
     
-	// On Attach method
+	/**
+	 * On Attach method(non-Javadoc)
+	 * @see android.app.Fragment#onAttach(android.app.Activity)
+	 */
 	@Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
@@ -82,58 +92,74 @@ public class NetFragment extends Fragment {
 
     }
 
-    // On Create method
+    /**
+     *  On Create method
+     */
     @Override
-    public void onCreate(Bundle saved) {
-    	super.onCreate(saved);
+    public void onCreate(Bundle fromSave) {
+    	super.onCreate(fromSave);
     	if (L) Log.i(TAG, "onCreate");
+    	
+//    	onRestoreInstanceState(fromSave);
+    	
     }
 
 
-	// On CreateView method
+	/**
+	 *  On CreateView method
+	 */
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle fromSave) {
         if (L) Log.i(TAG, "onCreateView");
 
         View netFragView = inflater.inflate(R.layout.fragment_net, container, false);
-        
-        final EditText hostName = (EditText) netFragView.findViewById(R.id.hostName);
-
-		Button netCnctBtn = (Button) netFragView.findViewById(R.id.cnctBtn);
-		netCnctBtn.setOnClickListener(
-				new OnClickListener() {
+        mSrvrName = (EditText) netFragView.findViewById(R.id.srvrName);
+        mHostName = (EditText) netFragView.findViewById(R.id.hostName);
+        mHostPort = (EditText) netFragView.findViewById(R.id.hostPort);
+		mSrvrCnctBtn = (ToggleButton) netFragView.findViewById(R.id.srvrConnect);
+		
+		mSrvrCnctBtn.setOnCheckedChangeListener(
+			new CompoundButton.OnCheckedChangeListener() {
 				@Override
-				public void onClick(final View thisView) {
-					//Pass View through to the handler so that findViewById
-					//can be used to get a handle on the fragments own views.
-				     if (L) Log.i(TAG, "onClick Connect");
-				     netListener.onServerChange(hostName.getText().toString(), 2005);
+				public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+					if (L) Log.i(TAG, "onClick Connect Host");
+
+					srvrIP = new Bundle();
+					
+					if (isChecked) {
+						btnState = true;
+						srvrIP.putBoolean(STATE, true);
+						srvrIP.putString(NAME, mSrvrName.getText().toString());
+						srvrIP.putString(ADDR, mHostName.getText().toString());
+						srvrIP.putString(PORT, mHostPort.getText().toString());
+						netListener.onServerChange(srvrIP);
+					}
+					else {
+						btnState = false;
+						srvrIP.putBoolean(STATE, false);
+						srvrIP.putString(NAME, null);
+						srvrIP.putString(ADDR, null);
+						srvrIP.putString(PORT, null);
+						netListener.onServerChange(srvrIP);
+					}
 				}
 			}
 		);
 
-		Button netDiscBtn = (Button) netFragView.findViewById(R.id.discBtn);
-		netDiscBtn.setOnClickListener(
-			new OnClickListener() {
-				@Override
-				public void onClick(final View thisView) {
-					//Pass View through to the handler so that findViewById
-					//can be used to get a handle on the fragments own views.
-				     if (L) Log.i(TAG, "onClick Disconnect");
-				     netListener.onServerChange(null, 0);
-				}
-			}
-		);
-                
-        return netFragView;
+ //   	onRestoreInstanceState(fromSave);
+
+    	return netFragView;
     }
 
     
     // On ActivityCreated method
     @Override
-    public void onActivityCreated(Bundle saved) {
-    	super.onActivityCreated(saved);
+    public void onActivityCreated(Bundle fromSave) {
+    	super.onActivityCreated(fromSave);
     	if (L) Log.i(TAG, "onActivityCreated");
+    	
+//    	onRestoreInstanceState(fromSave);
+
     }
     
 
@@ -150,6 +176,10 @@ public class NetFragment extends Fragment {
     public void onResume() {
     	super.onResume();
     	if (L) Log.i(TAG, "onResume");
+    	
+    	onRestoreInstanceState(srvrIP);
+    	srvrIP = null;
+
     }
     
 
@@ -158,6 +188,9 @@ public class NetFragment extends Fragment {
     public void onPause() {
     	super.onPause();
     	if (L) Log.i(TAG, "onPause");
+    	
+    	srvrIP = new Bundle();
+    	onSaveInstanceState(srvrIP);
     }
     
 
@@ -169,11 +202,27 @@ public class NetFragment extends Fragment {
     }
     
 
-    // On SaveInstanceState method
+    // On Save Instance State method
     @Override
     public void onSaveInstanceState(Bundle toSave) {
     	super.onSaveInstanceState(toSave);
     	if (L) Log.i(TAG, "onSaveInstanceState");
-    }
+    	toSave.putBoolean(STATE, btnState);
+    	toSave.putString(NAME, mSrvrName.getText().toString());
+    	toSave.putString(ADDR, mHostName.getText().toString());
+    	toSave.putString(PORT, mHostPort.getText().toString());
+     }
     
+    //On Restore Instance State method
+    private void onRestoreInstanceState(Bundle fromSave) {
+    	if (L) Log.i(TAG, "onRestoreInstanceState");
+		if (fromSave != null) {
+			mSrvrCnctBtn.setChecked(fromSave.getBoolean(STATE));
+			mSrvrName.setText(fromSave.getString(NAME));
+			mHostName.setText(fromSave.getString(ADDR));
+			mHostPort.setText(fromSave.getString(PORT));
+		}
+
+    	
+    }
 }

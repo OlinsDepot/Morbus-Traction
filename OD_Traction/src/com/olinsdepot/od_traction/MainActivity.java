@@ -248,7 +248,7 @@ public class MainActivity extends Activity implements
      * Server change listener.
      */
     @Override
-    public void onServerChange(String srvrAddr, int srvrPort) {
+    public void onServerChange(Bundle srvrIP) {
     	Log.d(TAG,"onServerChange");
     	
     	// Start up MorBus service on server with this IP
