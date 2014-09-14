@@ -2,6 +2,7 @@ package com.olinsdepot.mbus_srvc;
 
 import android.app.Service;
 import android.content.Intent;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -86,8 +87,15 @@ public class MbusService extends Service {
 	public IBinder onBind(Intent intent) {
 		// Bind with messenger
 		if (L) Log.i(TAG, "Start Mbus Service");
+		
+		// Get the IP info to connect to the server
+		Bundle extras = intent.getExtras();
+		
+		// pass IP info to the service
 		Message msg = mSrvcHandler.obtainMessage();
 		msg.what = 1;
+		msg.obj = extras.getString("IP_ADR");
+		msg.arg1 = Integer.parseInt(extras.getString("IP_PORT"));
 		mSrvcHandler.sendMessage(msg);
 		
 		return mMsgFromClient.getBinder();
@@ -126,17 +134,18 @@ public class MbusService extends Service {
 		
 		@Override
 		public void handleMessage(Message msg) {
+			if (L) Log.i(TAG,"ServiceManager msg = " + msg.what);
+			
 			
 			switch (msg.what) {
+			
+			// Start up the service and connect to the server.
 			case 1:
-				//Start up service
-				if (L) Log.i(TAG,"Start comms thread");
-				
-				// Start a thread to receive from the server
+				// Start a thread to receive from the server.
 				try {
 					// create a socket.
-					// TODO Pass server address and port from main in msg.
-					MbusSrvSocket = new Socket(InetAddress.getByName("192.168.0.43"), 2005);
+					MbusSrvSocket = new Socket(InetAddress.getByName((String) msg.obj), msg.arg1);
+//					MbusSrvSocket = new Socket(InetAddress.getByName("192.168.0.43"), 2005);
 					commsThread = new CommsThread(MbusSrvSocket);
 					commsThread.start();				
 				}
@@ -163,6 +172,8 @@ public class MbusService extends Service {
 				Toast.makeText(getApplicationContext(), "Mbus Server Connected", Toast.LENGTH_SHORT).show();
 
 				break;
+			
+			// Disconnect the server and shut down the service.
 			case 2:
 				//Shut down service
 				//TODO Close socket and cancel related tasks, then shutdown the service.

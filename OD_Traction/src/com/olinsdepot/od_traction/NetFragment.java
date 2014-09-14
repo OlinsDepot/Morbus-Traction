@@ -35,21 +35,21 @@ public class NetFragment extends Fragment {
 	 */
 	private MainActivity mActivity;
 	
+	// Links to fields in the user UI.
 	private EditText mSrvrName;
     private EditText mHostName;
     private EditText mHostPort;    
 	private ToggleButton mSrvrCnctBtn;
 
-	 /**
-	  * Fragment State
-	  */
-	 private static Bundle srvrIP = null;
-	 private static boolean btnState = false;
-	 
-	 private static final String NAME = "SRV_NAME";
-	 private static final String ADDR = "IP_ADR";
-	 private static final String PORT = "IP_PORT";
-	 private static final String STATE = "IP_CNCT";
+	// Bundle to preserve and communicate UI status.
+	private static Bundle srvrState = null;
+	private static boolean btnState = false;
+	
+	// Fields in the status bundle
+	private static final String NAME = "SRV_NAME";
+	private static final String ADDR = "IP_ADR";
+	private static final String PORT = "IP_PORT";
+	private static final String STATE = "IP_CNCT";
 
 	 
 	 /**
@@ -124,7 +124,7 @@ public class NetFragment extends Fragment {
 				public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 					if (L) Log.i(TAG, "onClick Connect Host");
 
-					srvrIP = new Bundle();
+					Bundle srvrIP = new Bundle();
 					
 					if (isChecked) {
 						btnState = true;
@@ -132,7 +132,6 @@ public class NetFragment extends Fragment {
 						srvrIP.putString(NAME, mSrvrName.getText().toString());
 						srvrIP.putString(ADDR, mHostName.getText().toString());
 						srvrIP.putString(PORT, mHostPort.getText().toString());
-						netListener.onServerChange(srvrIP);
 					}
 					else {
 						btnState = false;
@@ -140,8 +139,9 @@ public class NetFragment extends Fragment {
 						srvrIP.putString(NAME, null);
 						srvrIP.putString(ADDR, null);
 						srvrIP.putString(PORT, null);
-						netListener.onServerChange(srvrIP);
 					}
+
+					netListener.onServerChange(srvrIP);
 				}
 			}
 		);
@@ -177,8 +177,8 @@ public class NetFragment extends Fragment {
     	super.onResume();
     	if (L) Log.i(TAG, "onResume");
     	
-    	onRestoreInstanceState(srvrIP);
-    	srvrIP = null;
+    	onRestoreInstanceState(srvrState);
+    	srvrState = null;
 
     }
     
@@ -189,8 +189,8 @@ public class NetFragment extends Fragment {
     	super.onPause();
     	if (L) Log.i(TAG, "onPause");
     	
-    	srvrIP = new Bundle();
-    	onSaveInstanceState(srvrIP);
+    	srvrState = new Bundle();
+    	onSaveInstanceState(srvrState);
     }
     
 

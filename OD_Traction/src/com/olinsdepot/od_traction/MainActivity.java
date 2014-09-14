@@ -44,6 +44,7 @@ public class MainActivity extends Activity implements
 	private final String TAG = getClass().getSimpleName();
 	private static final boolean L = true;
 	
+	
     /**
      * Nav Drawer - Fragment managing the behaviors, interactions and presentation.
      */
@@ -254,7 +255,8 @@ public class MainActivity extends Activity implements
     	// Start up MorBus service on server with this IP
     	// If the IP address is null, shutdown the service.
     	Intent mbusIntent = new Intent(this, com.olinsdepot.mbus_srvc.MbusService.class);
-		 
+    	mbusIntent.putExtra("IP_ADR", srvrIP.getString("IP_ADR"));
+    	mbusIntent.putExtra("IP_PORT", srvrIP.getString("IP_PORT"));
 		if (!mRailSrvcBound) {
 			bindService(mbusIntent, mRailSrvcConnection, Context.BIND_AUTO_CREATE);
 		 }
@@ -268,14 +270,14 @@ public class MainActivity extends Activity implements
 	/**
 	 * Roster change listener
 	 */
-	public void onRosterChange(int tID, int dcdrAdr) {
-        Toast.makeText(getApplicationContext(), "ID="+tID+" Decoder="+dcdrAdr, Toast.LENGTH_SHORT).show();
-
+	public void onRosterChange(int tID, Bundle dcdrState) {
+    	Log.d(TAG,"onRosterChange");
+        
         // If no Morbus service connected, do nothing.
         if (!mRailSrvcBound) return;
         
         // Create and send a message to the service, using a supported 'what' value
-        Message msg = Message.obtain(null, MbusService.REG_DECODER, tID, dcdrAdr);
+        Message msg = Message.obtain(null, MbusService.REG_DECODER, tID, Integer.parseInt(dcdrState.getString("DCDR_ADR")));
         try {
             mRailSrvc.send(msg);
         } catch (RemoteException e) {

@@ -4,46 +4,75 @@
     android:layout_height="match_parent" >
 
     <EditText
-        android:id="@+id/dcdrAdr1"
+        android:id="@+id/dcdrName1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true"
-        android:ems="10"
-        android:inputType="number" >
+        android:layout_marginTop="16dp"
+        android:layout_marginLeft="10dp"
+        android:ems="12"
+        android:inputType="text"
+        android:hint="@string/dcdr_name">
 
         <requestFocus />
+
     </EditText>
+
+    <EditText
+        android:id="@+id/dcdrAdr1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/dcdrName1"
+        android:layout_toRightOf="@+id/dcdrName1"
+        android:layout_marginLeft="8dp"
+        android:ems="8"
+        android:inputType="number"
+        android:hint="@string/dcdr_addr"/>
     
     <ToggleButton
         android:id="@+id/dcdrSel1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignTop="@+id/dcdrAdr1"
-        android:layout_marginLeft="27dp"
+        android:layout_alignTop="@+id/dcdrName1"
         android:layout_toRightOf="@+id/dcdrAdr1"
-        android:text="Select Decoder"
-        android:textOff="SEL"
-        android:textOn="RLSE" />
-    
+        android:layout_marginLeft="10dp"
+        android:text="@string/dcdr_btn_txt"
+        android:textOff="@string/dcdr_btn_txt_acquire"
+        android:textOn="@string/dcdr_btn_txt_release" />
+
+	<EditText
+        android:id="@+id/dcdrName2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/dcdrName1"
+        android:layout_alignParentLeft="true"
+        android:layout_marginTop="16dp"
+        android:layout_marginLeft="10dp"
+        android:ems="12"
+        android:inputType="text"
+        android:hint="@string/dcdr_name" />
+	
     <EditText
         android:id="@+id/dcdrAdr2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_below="@+id/dcdrAdr1"
-        android:ems="10"
-        android:inputType="number" />
+        android:layout_alignTop="@+id/dcdrName2"
+        android:layout_toRightOf="@+id/dcdrName2"
+        android:layout_marginLeft="8dp"
+        android:ems="8"
+        android:inputType="number"
+        android:hint="@string/dcdr_addr"/>
 
     <ToggleButton
         android:id="@+id/dcdrSel2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignTop="@+id/dcdrAdr2"
-        android:layout_marginLeft="27dp"
+        android:layout_alignTop="@+id/dcdrName2"
         android:layout_toRightOf="@+id/dcdrAdr2"
-        android:text="Select Decoder"
-        android:textOff="SEL"
-        android:textOn="RLSE" />
+        android:layout_marginLeft="10dp"
+        android:text="@string/dcdr_btn_txt"
+        android:textOff="@string/dcdr_btn_txt_acquire"
+        android:textOn="@string/dcdr_btn_txt_release" />
 
 </RelativeLayout>
