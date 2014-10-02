@@ -15,8 +15,9 @@ import com.olinsdepot.od_traction.VerticalSeekBar;
 
 
 public class ThrottleFragment extends Fragment {
-/** tbd:	
-**/
+	private final String TAG = getClass().getSimpleName();
+	private static final boolean L = true;
+
 	// Container Activity must implement this interface
 	public interface OnThrottleChangeListener{
 		/**
@@ -28,13 +29,7 @@ public class ThrottleFragment extends Fragment {
 	}
 
 	private OnThrottleChangeListener tListener;
-	
-	/**
-	 * Logging flag and string for the class name
-	 */
-	private static final boolean L = true;
-	private final String TAG = getClass().getSimpleName();
-	
+	private VerticalSeekBar vbarThrottle;	
 	/**
 	 * Fragment characteristics, an example.
 	 */
@@ -133,15 +128,19 @@ public class ThrottleFragment extends Fragment {
 			}
 		);
 
-		VerticalSeekBar vbarThrottle = (VerticalSeekBar)tFragView.findViewById(R.id.Throttle);
-		vbarThrottle.setMax(100);
+		vbarThrottle = (VerticalSeekBar)tFragView.findViewById(R.id.Throttle);
+		vbarThrottle.setMax(126);
 		vbarThrottle.setProgress(tSet);
 		vbarThrottle.setOnSeekBarChangeListener(
 			new VerticalSeekBar.OnSeekBarChangeListener() {
 				@Override
 				public void onStopTrackingTouch(VerticalSeekBar seekBar) {
-//					sendToServer("T1done");
-					speed = tDir*tSet;
+					if (tSet == 0) {
+						tDir = 0;
+						speed = 0;
+					} else {
+						speed = tDir*tSet;
+					}
 					tListener.onThrottleChange(tID, speed);
 				}
 
@@ -223,6 +222,10 @@ public class ThrottleFragment extends Fragment {
 		if (tDir != 0) {
 			tDir = 0;
 			tSet = 0;
+			speed = 0;
+			vbarThrottle.setProgress(tSet);
+			tListener.onThrottleChange(tID, speed);
+
 		}
 	}
 

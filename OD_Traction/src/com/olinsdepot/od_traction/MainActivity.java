@@ -277,7 +277,7 @@ public class MainActivity extends Activity implements
         if (!mRailSrvcBound) return;
         
         // Create and send a message to the service, using a supported 'what' value
-        Message msg = Message.obtain(null, MbusService.REG_DECODER, tID, Integer.parseInt(dcdrState.getString("DCDR_ADR")));
+        Message msg = Message.obtain(null, MbusService.CMD_ACQ_DECODER, tID, Integer.parseInt(dcdrState.getString("DCDR_ADR")));
         try {
             mRailSrvc.send(msg);
         } catch (RemoteException e) {
@@ -297,7 +297,7 @@ public class MainActivity extends Activity implements
         if (!mRailSrvcBound) return;
         
         // Create and send a message to the service, using a supported 'what' value
-        Message msg = Message.obtain(null, MbusService.THROTTLE_CHANGE, tID, speed);
+        Message msg = Message.obtain(null, MbusService.CMD_THTL_STEP, tID, speed);
         try {
             mRailSrvc.send(msg);
         } catch (RemoteException e) {
@@ -322,7 +322,7 @@ public class MainActivity extends Activity implements
     		mRailSrvc = new Messenger(service);
     		
     		// Send the MorBus service the client's message handler.
-    		Message msg = Message.obtain(null, MbusService.REGISTER, 0, 0);
+    		Message msg = Message.obtain(null, MbusService.CMD_REGISTER, 0, 0);
     		msg.replyTo  = mRailSrvcMsgToClient;
             try {
                 mRailSrvc.send(msg);
@@ -348,7 +348,7 @@ public class MainActivity extends Activity implements
 	static class MsgToClient extends Handler {
 		@Override
 		public void handleMessage(Message msg) {
-			if (L) Log.i("ClientMsgSnd", "Event Received = " + msg.what);
+			if (L) Log.i("MsgToClient", "Event Received = " + msg.what);
 			//TODO Handle server event.
 		}
 	}

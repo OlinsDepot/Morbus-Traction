@@ -124,6 +124,12 @@ public class NetFragment extends Fragment {
 				public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 					if (L) Log.i(TAG, "onClick Connect Host");
 
+				     // Handle bogus call when button state is restored in onRestoreInstance
+				     if (isChecked == btnState) {
+				    	 return;
+				     }
+				     
+				     // Legitimate button state change
 					Bundle srvrIP = new Bundle();
 					
 					if (isChecked) {
