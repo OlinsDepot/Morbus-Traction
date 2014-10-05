@@ -35,16 +35,16 @@ public class MbusService extends Service {
 	// Thread to start service threads, connect to server and stop service.
 	private HandlerThread mSrvcMgrThread;
 	private Looper mSrvcMgrLooper;
-	private static MbusSrvcMgr mSrvcMgrHandler;
+	private static Handler mSrvcMgrHandler;
 	
 	// Thread to make network connection to server.
 	private Socket MbusSrvSocket;
-	private CommsThread commsThread;
-	static MsgFromSrvr mMsgFromSrvr = new MsgFromSrvr();
-	private static Messenger mMsgToSrvr;
+	private CommsThread mCommsThread;
+	static Handler mCommsToSrvcHandler = new CommsToSrvcHandler();
+	private static Messenger mSrvcToCommsMsgr;
 
-	private final Messenger mMsgFromClient = new Messenger(new MsgFromClient());
-	private static Messenger mMsgToClient;
+	private final Messenger mClientToSrvcMsgr = new Messenger(new ClientToSrvcHandler());
+	private static Messenger mSrvcToClientMsgr;
 	
 	// Morbus service commands
 	public static final int CMD_REGISTER	= 1;	// Register the client receive handler
@@ -108,7 +108,7 @@ public class MbusService extends Service {
 		msg.arg1 = Integer.parseInt(extras.getString("IP_PORT"));
 		mSrvcMgrHandler.sendMessage(msg);
 		
-		return mMsgFromClient.getBinder();
+		return mClientToSrvcMsgr.getBinder();
 	}
 	
 	
@@ -156,8 +156,8 @@ public class MbusService extends Service {
 					MbusSrvSocket = new Socket(InetAddress.getByName((String) msg.obj), msg.arg1);
 					
 					// Start the Comms thread on the socket.
-					commsThread = new CommsThread(MbusSrvSocket);
-					commsThread.start();				
+					mCommsThread = new CommsThread(MbusSrvSocket);
+					mCommsThread.start();				
 				}
 				catch (UnknownHostException e) {
 					Log.d(TAG, e.getLocalizedMessage());
@@ -199,7 +199,7 @@ public class MbusService extends Service {
 	 * 
 	 * @param msg - Message containing byte count and byte data sent from server.
 	 */
-	static class MsgFromSrvr extends Handler {
+	static class CommsToSrvcHandler extends Handler {
 		@Override
 		public void handleMessage(Message msg)
 		{
@@ -208,10 +208,10 @@ public class MbusService extends Service {
 
 			// Event = CONNECTED - save servers message handler.
 			case EVT_CONNECT:
-				mMsgToSrvr = msg.replyTo;
+				mSrvcToCommsMsgr = msg.replyTo;
 	    		Message msgClient = Message.obtain(null, 2);
 	    		try {
-	    			mMsgToClient.send(msgClient);
+	    			mSrvcToClientMsgr.send(msgClient);
 	    		} catch (RemoteException e) {
 	    			e.printStackTrace();
 	    		}
@@ -235,7 +235,7 @@ public class MbusService extends Service {
 	 * 
 	 * @param msg - Message containing an event for Mbus service to process.
 	 */
-	static class MsgFromClient extends Handler {
+	static class ClientToSrvcHandler extends Handler {
 		
 		@Override
 		public void handleMessage(Message msg) {
@@ -245,7 +245,7 @@ public class MbusService extends Service {
 			
 			// Register the client receiver
 			case CMD_REGISTER:
-				mMsgToClient = msg.replyTo;
+				mSrvcToClientMsgr = msg.replyTo;
 				break;
 
 			case CMD_ACQ_DECODER:
@@ -258,7 +258,7 @@ public class MbusService extends Service {
 				Message SrvrMsg = Message.obtain(null, msg.what,msg.arg1,msg.arg2);
 				SrvrMsg.obj = regDecoders[msg.arg1];
 				try {
-					mMsgToSrvr.send(SrvrMsg);
+					mSrvcToCommsMsgr.send(SrvrMsg);
 	    		} catch (RemoteException e) {
 	    			e.printStackTrace();
 	    		}
@@ -279,11 +279,11 @@ public class MbusService extends Service {
 			public void run() {
 				Log.d(TAG, "KeepAliveTask");
 				
-				if (mMsgToSrvr != null) {
+				if (mSrvcToCommsMsgr != null) {
 					//Send server a keep alive message.
 					Message SrvrMsg = Message.obtain(null,CMD_KEEP_ALIVE);
 					try {
-						mMsgToSrvr.send(SrvrMsg);
+						mSrvcToCommsMsgr.send(SrvrMsg);
 		    		} catch (RemoteException e) {
 		    			e.printStackTrace();
 		    		}

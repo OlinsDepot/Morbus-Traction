@@ -54,9 +54,10 @@ public class MainActivity extends Activity implements
     /**
      * Rail Service - Interface to layout server
      */
-    private Messenger mRailSrvc = null;
-    private boolean mRailSrvcBound = false;
-	private final Messenger mRailSrvcMsgToClient = new Messenger(new MsgToClient());
+    private ServiceConnection mRailSrvcConnection = null;
+    private boolean mSrvcBound = false;
+    private Messenger mClientToSrvcMsgr = null;
+ 	private final Messenger mSrvcToClientMsgr = new Messenger(new SrvcToClientHandler());
 
 
 	//
@@ -252,17 +253,19 @@ public class MainActivity extends Activity implements
     public void onServerChange(Bundle srvrIP) {
     	Log.d(TAG,"onServerChange");
     	
+    	//TODO implement a JMRI service. For now assume we are always connecting to a MorBus service
+    	mRailSrvcConnection = new MBusService();
+    	
     	// Start up MorBus service on server with this IP
-    	// If the IP address is null, shutdown the service.
     	Intent mbusIntent = new Intent(this, com.olinsdepot.mbus_srvc.MbusService.class);
     	mbusIntent.putExtra("IP_ADR", srvrIP.getString("IP_ADR"));
     	mbusIntent.putExtra("IP_PORT", srvrIP.getString("IP_PORT"));
-		if (!mRailSrvcBound) {
+		if (!mSrvcBound) {
 			bindService(mbusIntent, mRailSrvcConnection, Context.BIND_AUTO_CREATE);
 		 }
 		 else {
 	            unbindService(mRailSrvcConnection);
-	            mRailSrvcBound = false;
+	            mSrvcBound = false;
 		 }
 
     }
@@ -273,13 +276,13 @@ public class MainActivity extends Activity implements
 	public void onRosterChange(int tID, Bundle dcdrState) {
     	Log.d(TAG,"onRosterChange");
         
-        // If no Morbus service connected, do nothing.
-        if (!mRailSrvcBound) return;
+        // If rail service not connected, do nothing.
+        if (!mSrvcBound) return;
         
         // Create and send a message to the service, using a supported 'what' value
         Message msg = Message.obtain(null, MbusService.CMD_ACQ_DECODER, tID, Integer.parseInt(dcdrState.getString("DCDR_ADR")));
         try {
-            mRailSrvc.send(msg);
+            mClientToSrvcMsgr.send(msg);
         } catch (RemoteException e) {
             e.printStackTrace();
         }
@@ -294,12 +297,12 @@ public class MainActivity extends Activity implements
         Toast.makeText(getApplicationContext(), "ID="+tID+" Speed="+speed, Toast.LENGTH_SHORT).show();
 
         // If no Morbus service connected, do nothing.
-        if (!mRailSrvcBound) return;
+        if (!mSrvcBound) return;
         
         // Create and send a message to the service, using a supported 'what' value
         Message msg = Message.obtain(null, MbusService.CMD_THTL_STEP, tID, speed);
         try {
-            mRailSrvc.send(msg);
+            mClientToSrvcMsgr.send(msg);
         } catch (RemoteException e) {
             e.printStackTrace();
         }
@@ -311,41 +314,41 @@ public class MainActivity extends Activity implements
     //
     
     /**
-     * Class for interacting with the main interface of the service.
+     * Class for connecting to the MBus service.
      */
-    private ServiceConnection mRailSrvcConnection = new ServiceConnection() {
+    private class MBusService implements ServiceConnection {
     	
     	public void onServiceConnected(ComponentName className, IBinder service) {
     		Log.d(TAG, "onServiceConnected - " + className);
     		
     		// Connect the Morbus service's message handler.
-    		mRailSrvc = new Messenger(service);
+    		mClientToSrvcMsgr = new Messenger(service);
     		
     		// Send the MorBus service the client's message handler.
     		Message msg = Message.obtain(null, MbusService.CMD_REGISTER, 0, 0);
-    		msg.replyTo  = mRailSrvcMsgToClient;
+    		msg.replyTo  = mSrvcToClientMsgr;
             try {
-                mRailSrvc.send(msg);
+                mClientToSrvcMsgr.send(msg);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
-    		mRailSrvcBound = true;
+    		mSrvcBound = true;
     	}
     	
     	public void onServiceDisconnected(ComponentName className) {
     		Log.d(TAG, "onServiceDisconnected - " + className);
-    		mRailSrvc = null;
-    		mRailSrvcBound = false;
+    		mClientToSrvcMsgr = null;
+    		mSrvcBound = false;
     	}
     };
     
 	/**
-	 * Client message receiver. Bound to main thread. Passes client events from
+	 * Handler for messages from MBus service to Client. Runs on UI thread. Passes client events from
 	 * MBus service to Main thread to be parsed into MBus commands and sent.
 	 * 
 	 * @param msg - Message containing an event for Mbus service to process.
 	 */
-	static class MsgToClient extends Handler {
+	static class SrvcToClientHandler extends Handler {
 		@Override
 		public void handleMessage(Message msg) {
 			if (L) Log.i("MsgToClient", "Event Received = " + msg.what);

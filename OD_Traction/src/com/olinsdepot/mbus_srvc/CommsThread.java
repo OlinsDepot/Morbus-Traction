@@ -25,9 +25,9 @@ public class CommsThread extends Thread {
 	private final OutputStream outputStream;
 	
 	// Thread to send to server
-	private static HandlerThread mSrvrSndThread;
-	private static Looper mSrvrSndLooper;
-	private static SndToSrvr mSndToSrvrHandler;
+	private static HandlerThread mCommsSendThread;
+	private static Looper mCommsSendLooper;
+	private static Handler mCommsSendHandler;
 
 	private enum srvrState {
 		INIT,
@@ -92,23 +92,21 @@ public class CommsThread extends Thread {
 		outputStream = tmpOut;
 		
 		// Start the thread to send to the server
-		mSrvrSndThread = new HandlerThread("SrvrMsgSnd", Process.THREAD_PRIORITY_BACKGROUND);
-		mSrvrSndThread.start();
-		mSrvrSndLooper = mSrvrSndThread.getLooper();
-		mSndToSrvrHandler = new SndToSrvr(mSrvrSndLooper);
-
+		mCommsSendThread = new HandlerThread("SrvrMsgSnd", Process.THREAD_PRIORITY_BACKGROUND);
+		mCommsSendThread.start();
+		mCommsSendLooper = mCommsSendThread.getLooper();
+		mCommsSendHandler = new CommsSendHandler(mCommsSendLooper);
 	}
 	
 
 	/**
-	 * Server Receive Thread: Parses packet from server and generates an
+	 * Comms Receive Thread: Parses packet from server and generates an
 	 * event to send to the client.
 	 */
 	public void run() {
 		
 		byte[]	rcvBuf = new byte[1024];		// buffer store for the stream
 		int bytes = 0;		                    // number of bytes returned from read()
-//		byte[] packet;
 			
 		while(true) {
 			//Make a blocking call to read input stream.
@@ -125,8 +123,8 @@ public class CommsThread extends Thread {
 			
 
 			// If logging is enabled, display the text received
-//			if (L) Log.i("SrvrMsgRcv", bytesToHex(packet));
-			if (L) Log.i("SrvrMsgRcv", String.valueOf(rcvBuf[0]));
+//			if (L) Log.i("CommsReceive", bytesToHex(packet));
+			if (L) Log.i("CommsReceive", String.valueOf(rcvBuf[0]));
 			
 			//TODO Make state machine to process buffer.
 			
@@ -140,9 +138,9 @@ public class CommsThread extends Thread {
 				//      send message handler to service, change server state to ready.
 
 				// Send "Connect" event to Morbus service. Attach the server's message handler.
-				Message msg = MbusService.mMsgFromSrvr.obtainMessage(MbusService.EVT_CONNECT, 0, 0);
-	    		msg.replyTo  = new Messenger(mSndToSrvrHandler);
-                MbusService.mMsgFromSrvr.sendMessage(msg);
+				Message msg = MbusService.mCommsToSrvcHandler.obtainMessage(MbusService.EVT_CONNECT, 0, 0);
+	    		msg.replyTo  = new Messenger(mCommsSendHandler);
+                MbusService.mCommsToSrvcHandler.sendMessage(msg);
 				break;
 				
 			// Process remaining responses.
@@ -154,17 +152,17 @@ public class CommsThread extends Thread {
 	}
 
 	/**
-	 *  Server Send Thread: Parses command from client and generates a
+	 *  Comms Send Thread: Parses command from client and generates a
 	 *  packet to send to the server.
 	 *  
 	 *  @param msg - Message from Main containing an MBus event.
 	 */
-	private final class SndToSrvr extends Handler {
+	private final class CommsSendHandler extends Handler {
 		
 		private byte sndBuf[];
 		
 		// Constructor
-		public SndToSrvr(Looper looper) {
+		public CommsSendHandler(Looper looper) {
 			super(looper);
 		}
 		
