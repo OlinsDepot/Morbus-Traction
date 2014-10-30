@@ -33,9 +33,10 @@ public class MbusService extends Service {
 	private static final boolean L = true;
 	
 	// Thread to start service threads, connect to server and stop service.
-	private HandlerThread mSrvcMgrThread;
-	private Looper mSrvcMgrLooper;
-	private static Handler mSrvcMgrHandler;
+	private HandlerThread mClientToSrvcThread;
+	private Looper mClientToSrvcLooper;
+	private static Handler mClientToSrvcHandler;
+	private static Messenger mSrvcToClientMsgr;
 	
 	// Thread to make network connection to server.
 	private Socket MbusSrvSocket;
@@ -43,20 +44,19 @@ public class MbusService extends Service {
 	static Handler mCommsToSrvcHandler = new CommsToSrvcHandler();
 	private static Messenger mSrvcToCommsMsgr;
 
-	private final Messenger mClientToSrvcMsgr = new Messenger(new ClientToSrvcHandler());
-	private static Messenger mSrvcToClientMsgr;
 	
 	// Morbus service commands
-	public static final int CMD_REGISTER	= 1;	// Register the client receive handler
-	public static final int CMD_POWER_ON	= 2;	// Switch on power to the layout
-	public static final int CMD_POWER_OFF	= 3;	// Switch off power to the layout
-	public static final int CMD_POWER_IS	= 4;	// Request current power status
-	public static final int CMD_EMRG_STOP	= 5;	// Send MoRBus reset
-	public static final int CMD_ACQ_DECODER	= 6;	// Register a DCC decoder to a throttle
-	public static final int CMD_RLS_DECODER	= 7;	// Release a DCC decoder from a throttle
-	public static final int CMD_THTL_STEP	= 8;	// Set new throttle step on specified decoder
-	public static final int CMD_HARD_STOP	= 9;	// Send hard stop to specified decoder
-	public static final int CMD_KEEP_ALIVE	= 10;	// Send a keep alive message to server
+	public static final int CMD_CONNECT		= 1;	// Connect to server in passed arg.
+	public static final int CMD_DISCONNECT	= 2;	// Disconnect server & shutdown service
+	public static final int CMD_POWER_ON	= 4;	// Switch on power to the layout
+	public static final int CMD_POWER_OFF	= 5;	// Switch off power to the layout
+	public static final int CMD_POWER_IS	= 6;	// Request current power status
+	public static final int CMD_EMRG_STOP	= 7;	// Send MoRBus reset
+	public static final int CMD_ACQ_DECODER	= 8;	// Register a DCC decoder to a throttle
+	public static final int CMD_RLS_DECODER	= 9;	// Release a DCC decoder from a throttle
+	public static final int CMD_THTL_STEP	= 10;	// Set new throttle step on specified decoder
+	public static final int CMD_HARD_STOP	= 11;	// Send hard stop to specified decoder
+	public static final int CMD_KEEP_ALIVE	= 12;	// Send a keep alive message to server
 	
 	// Morbus service events
 	public static final int EVT_CONNECT		= 1;	// Service has connected to remote server
@@ -81,11 +81,11 @@ public class MbusService extends Service {
 	@Override
 	public void onCreate() {
 		if (L) Log.i(TAG, "Create MBus Service");
-		// Create thread to manage service.
-		mSrvcMgrThread = new HandlerThread("MBusSrvcMgr", Process.THREAD_PRIORITY_BACKGROUND);
-		mSrvcMgrThread.start();
-		mSrvcMgrLooper = mSrvcMgrThread.getLooper();
-		mSrvcMgrHandler = new MbusSrvcMgr(mSrvcMgrLooper);
+		// Create thread to dispatch incoming messages from Client side interface.
+		mClientToSrvcThread = new HandlerThread("MBusSrvcMgr", Process.THREAD_PRIORITY_BACKGROUND);
+		mClientToSrvcThread.start();
+		mClientToSrvcLooper = mClientToSrvcThread.getLooper();
+		mClientToSrvcHandler = new ClientToSrvcHandler(mClientToSrvcLooper);
 		
 	}
 	
@@ -95,20 +95,10 @@ public class MbusService extends Service {
 	 */
 	@Override
 	public IBinder onBind(Intent intent) {
-		// Bind with messenger
 		if (L) Log.i(TAG, "Start Mbus Service");
 		
-		// Get the IP info to connect to the server
-		Bundle extras = intent.getExtras();
-		
-		// pass IP info to the service
-		Message msg = mSrvcMgrHandler.obtainMessage();
-		msg.what = 1;
-		msg.obj = extras.getString("IP_ADR");
-		msg.arg1 = Integer.parseInt(extras.getString("IP_PORT"));
-		mSrvcMgrHandler.sendMessage(msg);
-		
-		return mClientToSrvcMsgr.getBinder();
+		// Pass the service's Client message handler back.
+		return new Messenger(mClientToSrvcHandler).getBinder();
 	}
 	
 	
@@ -117,10 +107,10 @@ public class MbusService extends Service {
 	 */
 	@Override
 	public void onDestroy() {
-		if (L) Log.i(TAG, "Stop Mbus Service");
-		Message msg = mSrvcMgrHandler.obtainMessage();
-		msg.what = 2;
-		mSrvcMgrHandler.sendMessage(msg);
+		if (L) Log.i(TAG, "Mbus Service Stopping");
+		Message msg = mClientToSrvcHandler.obtainMessage();
+		msg.what = CMD_DISCONNECT;
+		mClientToSrvcHandler.sendMessage(msg);
 
 		super.onDestroy();
 	}
@@ -131,29 +121,39 @@ public class MbusService extends Service {
 	//
 	
 	/**
-	 *  Mbus Service Manager: Coordinates startup and shutdown of Service components
+	 *  Mbus Client Message Handler: Coordinates startup and shutdown of Service components.
+	 *  Dispatches messages from the client side.
 	 *  by request from the originating thread
 	 *  
 	 *  @param msg - Message containing request type and ip address of server.
 	 */
-	private final class MbusSrvcMgr extends Handler {
+	private final class ClientToSrvcHandler extends Handler {
 	
-		public MbusSrvcMgr(Looper looper) {
+		public ClientToSrvcHandler(Looper looper) {
 			super(looper);
 		}
 		
 		@Override
 		public void handleMessage(Message msg) {
 			if (L) Log.i(TAG,"ServiceManager msg = " + msg.what);
-			
+		
+			// Dispatch the incoming message based on 'what'.
 			switch (msg.what) {
 			
-			// Start up the service.
-			case 1:
-				// Connect to the server.
+			// Connect to the server.
+			case CMD_CONNECT:
+				// Get IP information for the target server
+				Bundle mSrvrIP = (Bundle)msg.obj;
+				
+				// Register the Client's handler for messages from the service.
+				mSrvcToClientMsgr = msg.replyTo;
+	
+				// Extract IP info and create a socket. Start Comms Thread on new Socket.
+				String mAddr = mSrvrIP.getString("IP_ADR");
+				int mPort = Integer.parseInt(mSrvrIP.getString("IP_PORT"));
+				
 				try {
-					// create a socket.
-					MbusSrvSocket = new Socket(InetAddress.getByName((String) msg.obj), msg.arg1);
+					MbusSrvSocket = new Socket(InetAddress.getByName(mAddr), mPort);
 					
 					// Start the Comms thread on the socket.
 					mCommsThread = new CommsThread(MbusSrvSocket);
@@ -169,7 +169,7 @@ public class MbusService extends Service {
 				//Start a thread to send keep alive commands every 50 seconds
 				KeepAliveThread();
 				
-				//Create array of to hold DCC encoders registered to each throttle. (4 max);
+				//Create array to hold DCC encoders registered to each throttle. (4 max);
 				regDecoders = new DCCencoder[4];
 
 				// Announce service startup
@@ -177,18 +177,33 @@ public class MbusService extends Service {
 				break;
 			
 			// Disconnect the server and shut down the service.
-			case 2:
+			case CMD_DISCONNECT:
 				//Shut down service
 				//TODO Close socket and cancel related tasks, then shutdown the service.
 				if (L) Log.i(TAG,"Stop comms thread");
 
 				Toast.makeText(getApplicationContext(), "Mbus Server Disconnected", Toast.LENGTH_SHORT).show();
-
 				break;
+
+			//Register a target decoder to a throttle.
+			case CMD_ACQ_DECODER:
+				regDecoders[msg.arg1] = new DCCencoder(msg.arg2);
+				break;
+				
+			// Dispatch a change in throttle step for the decoder registered to the throttle in arg1.
+			case CMD_THTL_STEP:
+				Message SrvrMsg = Message.obtain(null, msg.what,msg.arg1,msg.arg2);
+				SrvrMsg.obj = regDecoders[msg.arg1];
+				try {
+					mSrvcToCommsMsgr.send(SrvrMsg);
+	    		} catch (RemoteException e) {
+	    			e.printStackTrace();
+	    		}
+				
+			//Unknown command in message
 			default:
-				//Unknown command in message
-				Log.d(TAG, "MbusSrvcMgr unknown request type");
-			}
+				Log.d("MsgFromClient", "Unknown command type");
+				}
 		}
 	}
 
@@ -205,10 +220,14 @@ public class MbusService extends Service {
 		{
 			// Dispatch event
 			switch (msg.what) {
+			
+			case CommsThread.EVT_START:
+				mSrvcToCommsMsgr = msg.replyTo;
+				break;
+				
 
 			// Event = CONNECTED - save servers message handler.
-			case EVT_CONNECT:
-				mSrvcToCommsMsgr = msg.replyTo;
+			case CommsThread.EVT_CONNECT:
 	    		Message msgClient = Message.obtain(null, 2);
 	    		try {
 	    			mSrvcToClientMsgr.send(msgClient);
@@ -228,47 +247,6 @@ public class MbusService extends Service {
 	};
 	
 	
-	
-	/**
-	 * Handle messages from client UI. Bound to main thread. Passes client events from
-	 * Main thread to MBus service to be parsed into MBus commands and sent.
-	 * 
-	 * @param msg - Message containing an event for Mbus service to process.
-	 */
-	static class ClientToSrvcHandler extends Handler {
-		
-		@Override
-		public void handleMessage(Message msg) {
-			if (L) Log.i("ClientHandler", "Message Received = " + msg.what);
-
-			switch (msg.what) {
-			
-			// Register the client receiver
-			case CMD_REGISTER:
-				mSrvcToClientMsgr = msg.replyTo;
-				break;
-
-			case CMD_ACQ_DECODER:
-				//Register a target decoder to a throttle.
-				regDecoders[msg.arg1] = new DCCencoder(msg.arg2);
-				break;
-				
-			case CMD_THTL_STEP:
-				// Dispatch a change in throttle step for the decoder registered to the throttle in arg1.
-				Message SrvrMsg = Message.obtain(null, msg.what,msg.arg1,msg.arg2);
-				SrvrMsg.obj = regDecoders[msg.arg1];
-				try {
-					mSrvcToCommsMsgr.send(SrvrMsg);
-	    		} catch (RemoteException e) {
-	    			e.printStackTrace();
-	    		}
-				
-			default:
-				//Unknown command in message
-				Log.d("MsgFromClient", "Unknown command type");
-			}
-		}
-	}
 	
 	/**
 	 * Keep Alive Thread. Posts a keep-alive message to the send queue every 50 seconds.

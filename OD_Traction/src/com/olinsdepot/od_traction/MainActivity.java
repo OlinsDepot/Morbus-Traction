@@ -54,6 +54,7 @@ public class MainActivity extends Activity implements
     /**
      * Rail Service - Interface to layout server
      */
+    private Bundle mSrvrIP;
     private ServiceConnection mRailSrvcConnection = null;
     private boolean mSrvcBound = false;
     private Messenger mClientToSrvcMsgr = null;
@@ -70,9 +71,9 @@ public class MainActivity extends Activity implements
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
         if (L) Log.i(TAG, "onCreate" + (null == savedInstanceState ? " Restored state" : " No saved state"));
+
+        setContentView(R.layout.activity_main);
 
         mNavigationDrawerFragment = (NavigationDrawerFragment) getFragmentManager().findFragmentById(R.id.navigation_drawer);
         mTitle = getTitle();
@@ -256,16 +257,13 @@ public class MainActivity extends Activity implements
     	//TODO implement a JMRI service. For now assume we are always connecting to a MorBus service
     	mRailSrvcConnection = new MBusService();
     	
-    	// Start up MorBus service on server with this IP
+    	// Save server IP info
+    	mSrvrIP = srvrIP;
+    	
+    	// Start up MorBus service
     	Intent mbusIntent = new Intent(this, com.olinsdepot.mbus_srvc.MbusService.class);
-    	mbusIntent.putExtra("IP_ADR", srvrIP.getString("IP_ADR"));
-    	mbusIntent.putExtra("IP_PORT", srvrIP.getString("IP_PORT"));
 		if (!mSrvcBound) {
 			bindService(mbusIntent, mRailSrvcConnection, Context.BIND_AUTO_CREATE);
-		 }
-		 else {
-	            unbindService(mRailSrvcConnection);
-	            mSrvcBound = false;
 		 }
 
     }
@@ -318,23 +316,30 @@ public class MainActivity extends Activity implements
      */
     private class MBusService implements ServiceConnection {
     	
+    	// Called when service connects.
     	public void onServiceConnected(ComponentName className, IBinder service) {
     		Log.d(TAG, "onServiceConnected - " + className);
     		
-    		// Connect the Morbus service's message handler.
+    		// Register the MorBus service's Client message handler.
     		mClientToSrvcMsgr = new Messenger(service);
+    		mSrvcBound = true;
     		
-    		// Send the MorBus service the client's message handler.
-    		Message msg = Message.obtain(null, MbusService.CMD_REGISTER, 0, 0);
+    		// Send the service the connect message and info
+    		// 	what = CONNECT
+    		// 	arg1 = arg2 = 0
+    		// 	obj = Servers IP information
+    		// 	replyTo = Clients service message handler
+    		Message msg = Message.obtain(null, MbusService.CMD_CONNECT, 0, 0);
+    		msg.obj = mSrvrIP;
     		msg.replyTo  = mSrvcToClientMsgr;
             try {
                 mClientToSrvcMsgr.send(msg);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
-    		mSrvcBound = true;
     	}
     	
+    	// Called when service disconnects unexpectedly.
     	public void onServiceDisconnected(ComponentName className) {
     		Log.d(TAG, "onServiceDisconnected - " + className);
     		mClientToSrvcMsgr = null;
@@ -343,8 +348,8 @@ public class MainActivity extends Activity implements
     };
     
 	/**
-	 * Handler for messages from MBus service to Client. Runs on UI thread. Passes client events from
-	 * MBus service to Main thread to be parsed into MBus commands and sent.
+	 * Handler for messages from MBus service to Client. Receives events from
+	 * MBus service to Main thread to be parsed for display on the GUI.
 	 * 
 	 * @param msg - Message containing an event for Mbus service to process.
 	 */
