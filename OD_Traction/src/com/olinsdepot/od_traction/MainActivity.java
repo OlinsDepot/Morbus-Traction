@@ -24,7 +24,7 @@ import android.view.MenuItem;
 import android.widget.Toast;
 import android.support.v4.widget.DrawerLayout;
 
-import com.olinsdepot.mbus_srvc.MbusService;
+import com.olinsdepot.mbus_srvc.MbusService.*;
 
 
 /**
@@ -278,7 +278,7 @@ public class MainActivity extends Activity implements
         if (!mSrvcBound) return;
         
         // Create and send a message to the service, using a supported 'what' value
-        Message msg = Message.obtain(null, MbusService.CMD_ACQ_DECODER, tID, Integer.parseInt(dcdrState.getString("DCDR_ADR")));
+        Message msg = Message.obtain(null, MbusSrvcCmd.ACQ_DECODER.toCode(), tID, Integer.parseInt(dcdrState.getString("DCDR_ADR")));
         try {
             mClientToSrvcMsgr.send(msg);
         } catch (RemoteException e) {
@@ -298,7 +298,7 @@ public class MainActivity extends Activity implements
         if (!mSrvcBound) return;
         
         // Create and send a message to the service, using a supported 'what' value
-        Message msg = Message.obtain(null, MbusService.CMD_THTL_STEP, tID, speed);
+        Message msg = Message.obtain(null, MbusSrvcCmd.THTL_STEP.toCode(), tID, speed);
         try {
             mClientToSrvcMsgr.send(msg);
         } catch (RemoteException e) {
@@ -329,7 +329,7 @@ public class MainActivity extends Activity implements
     		// 	arg1 = arg2 = 0
     		// 	obj = Servers IP information
     		// 	replyTo = Clients service message handler
-    		Message msg = Message.obtain(null, MbusService.CMD_CONNECT, 0, 0);
+    		Message msg = Message.obtain(null, MbusSrvcCmd.CONNECT.toCode(), 0, 0);
     		msg.obj = mSrvrIP;
     		msg.replyTo  = mSrvcToClientMsgr;
             try {

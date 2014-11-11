@@ -12,19 +12,28 @@ import android.os.Messenger;
 import android.os.Process;
 import android.os.RemoteException;
 import android.util.Log;
+import android.util.SparseArray;
+import android.widget.Toast;
 
+import java.util.Timer;
+import java.util.TimerTask;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.Timer;
-import java.util.TimerTask;
 
+import com.olinsdepot.mbus_srvc.CommsThread.*;
 
-import android.widget.Toast;
 
 /**
- * MorBus Service
+ *  The MorBus Service translates the generic functions, (speed step, headlight on, etc.)
+ *  produced by user action on the GUI into commands to a remote MorBus server. The service
+ *  receives events from the main activity GUI and translates then into commands to the EmCAN
+ *  layer below which is connected to the remote server via LAN. The service translates responses
+ *  received from the EmCAN layer into events passed to the main activity which then updates the
+ *  state of the GUI. Work done in the service is performed on separate threads to avoid blocking
+ *  the GUI. 
+ *  
  * @author mhughes
  *
  */
@@ -32,43 +41,81 @@ public class MbusService extends Service {
 	private final String TAG = this.getClass().getSimpleName();
 	private static final boolean L = true;
 	
-	// Thread to start service threads, connect to server and stop service.
+
+	/**
+	 *  Morbus service commands
+	 */
+	public static enum MbusSrvcCmd {
+		CONNECT,
+		DISCONNECT,
+		POWER_ON,
+		POWER_OFF,
+		POWER_IS,
+		EMRG_STOP,
+		ACQ_DECODER,
+		RLS_DECODER,
+		THTL_STEP,
+		HARD_STOP;
+		
+		/* Returns the code for this MorBus Service command */
+		public int toCode() {
+			return this.ordinal();
+		}
+		
+		/* Returns the MorBus Service command for the code passed */
+		public static MbusSrvcCmd fromCode(int cmd) {
+			return MbusSrvcCmd.values()[cmd];
+		}
+	}
+	
+	/**
+	 * Morbus service events
+	 */
+	public static enum MbusSrvcEvt {
+		CONNECTED,
+		DISCONNECTED,
+		PORT_ON;
+
+		/* Return the code for this MorBus Service event. */
+		public int toCode() {
+			return this.ordinal();
+		}
+		
+		/* Return the MorBus Service event for the code passed. */
+		public static MbusSrvcEvt fromCode(int evt) {
+			return MbusSrvcEvt.values()[evt];
+		}
+		
+	}
+	
+
+	/*
+	 * Thread to handle the upward interface to GUI client. It receives commands from the GUI
+	 * on the ClientToSrvc messenger queue and sends responses to the SrvcToClient message
+	 * handler in the GUI.
+	 */
 	private HandlerThread mClientToSrvcThread;
 	private Looper mClientToSrvcLooper;
 	private static Handler mClientToSrvcHandler;
 	private static Messenger mSrvcToClientMsgr;
 	
-	// Thread to make network connection to server.
+	/* 
+	 * Thread to handle the downward interface to the EmCAN bus driver. GUI commands are
+	 * decomposed into EmCAN transactions and sent to the driver via the SrvcToComms message
+	 * queue. Responses from the EmCAN driver are received on the CommsToSrvc message queue.
+	 */
 	private Socket MbusSrvSocket;
 	private CommsThread mCommsThread;
 	static Handler mCommsToSrvcHandler = new CommsToSrvcHandler();
 	private static Messenger mSrvcToCommsMsgr;
 
 	
-	// Morbus service commands
-	public static final int CMD_CONNECT		= 1;	// Connect to server in passed arg.
-	public static final int CMD_DISCONNECT	= 2;	// Disconnect server & shutdown service
-	public static final int CMD_POWER_ON	= 4;	// Switch on power to the layout
-	public static final int CMD_POWER_OFF	= 5;	// Switch off power to the layout
-	public static final int CMD_POWER_IS	= 6;	// Request current power status
-	public static final int CMD_EMRG_STOP	= 7;	// Send MoRBus reset
-	public static final int CMD_ACQ_DECODER	= 8;	// Register a DCC decoder to a throttle
-	public static final int CMD_RLS_DECODER	= 9;	// Release a DCC decoder from a throttle
-	public static final int CMD_THTL_STEP	= 10;	// Set new throttle step on specified decoder
-	public static final int CMD_HARD_STOP	= 11;	// Send hard stop to specified decoder
-	public static final int CMD_KEEP_ALIVE	= 12;	// Send a keep alive message to server
-	
-	// Morbus service events
-	public static final int EVT_CONNECT		= 1;	// Service has connected to remote server
-	public static final int EVT_PORT_ON		= 2;	// Place holder for now
-	
-
 	// Keep alive thread
 	static final int UPDATE_INTERVAL = 50000;
 	private Timer timer = new Timer();
 	
 	// Registered decoders for throttle commands
-	private static DCCencoder regDecoders[];
+	private DCCencoder regDecoders[];
 
 
 	//
@@ -103,13 +150,13 @@ public class MbusService extends Service {
 	
 	
 	/**
-	 *  MorBus service shutdown.
+	 *  MorBus service unexpectedly shutdown.
 	 */
 	@Override
 	public void onDestroy() {
 		if (L) Log.i(TAG, "Mbus Service Stopping");
 		Message msg = mClientToSrvcHandler.obtainMessage();
-		msg.what = CMD_DISCONNECT;
+		msg.what = MbusSrvcEvt.DISCONNECTED.toCode();
 		mClientToSrvcHandler.sendMessage(msg);
 
 		super.onDestroy();
@@ -135,13 +182,13 @@ public class MbusService extends Service {
 		
 		@Override
 		public void handleMessage(Message msg) {
-			if (L) Log.i(TAG,"ServiceManager msg = " + msg.what);
+			if (L) Log.i(TAG,"MBUS Client Msg Hdlr msg = " + msg.what);
 		
 			// Dispatch the incoming message based on 'what'.
-			switch (msg.what) {
+			switch (MbusSrvcCmd.fromCode(msg.what)) {
 			
 			// Connect to the server.
-			case CMD_CONNECT:
+			case CONNECT:
 				// Get IP information for the target server
 				Bundle mSrvrIP = (Bundle)msg.obj;
 				
@@ -177,7 +224,7 @@ public class MbusService extends Service {
 				break;
 			
 			// Disconnect the server and shut down the service.
-			case CMD_DISCONNECT:
+			case DISCONNECT:
 				//Shut down service
 				//TODO Close socket and cancel related tasks, then shutdown the service.
 				if (L) Log.i(TAG,"Stop comms thread");
@@ -186,12 +233,12 @@ public class MbusService extends Service {
 				break;
 
 			//Register a target decoder to a throttle.
-			case CMD_ACQ_DECODER:
-				regDecoders[msg.arg1] = new DCCencoder(msg.arg2);
+			case ACQ_DECODER:
+				regDecoders[msg.arg1] = new DCCencoder((Bundle)msg.obj);
 				break;
 				
 			// Dispatch a change in throttle step for the decoder registered to the throttle in arg1.
-			case CMD_THTL_STEP:
+			case THTL_STEP:
 				Message SrvrMsg = Message.obtain(null, msg.what,msg.arg1,msg.arg2);
 				SrvrMsg.obj = regDecoders[msg.arg1];
 				try {
@@ -219,15 +266,14 @@ public class MbusService extends Service {
 		public void handleMessage(Message msg)
 		{
 			// Dispatch event
-			switch (msg.what) {
+			switch (CommsEvt.fromCode(msg.what)) {
 			
-			case CommsThread.EVT_START:
+			case START:
 				mSrvcToCommsMsgr = msg.replyTo;
 				break;
-				
 
 			// Event = CONNECTED - save servers message handler.
-			case CommsThread.EVT_CONNECT:
+			case CONNECT:
 	    		Message msgClient = Message.obtain(null, 2);
 	    		try {
 	    			mSrvcToClientMsgr.send(msgClient);
@@ -240,7 +286,7 @@ public class MbusService extends Service {
 			// All other events
     		default:
 				//Unknown event in message
-				Log.d("MsgFromSrvr", "Unknown event type");
+				Log.d("CommsToSrvcHandler", "Unknown event type");
     			break;
 			}
 		}
@@ -259,7 +305,7 @@ public class MbusService extends Service {
 				
 				if (mSrvcToCommsMsgr != null) {
 					//Send server a keep alive message.
-					Message SrvrMsg = Message.obtain(null,CMD_KEEP_ALIVE);
+					Message SrvrMsg = Message.obtain(null,CommsCmd.SND_KEEPALIVE.toCode());
 					try {
 						mSrvcToCommsMsgr.send(SrvrMsg);
 		    		} catch (RemoteException e) {

@@ -4,7 +4,7 @@ import android.os.Bundle;
 
 /**
  * The DCC encoder object is created with the characteristics, (address etc.)
- * of a specific decoder. It's methods translate general commands to set speed
+ * of a specific target decoder. It's methods translate general commands to set speed
  * or functions into DCC command strings specific to this decoder.
  * 
  * @author mhughes
