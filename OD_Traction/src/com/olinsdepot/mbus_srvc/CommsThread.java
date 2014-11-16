@@ -190,10 +190,23 @@ public class CommsThread extends Thread {
 	 * Standard Frame Opcodes
 	 */
 	private static enum StndFrmOp {
-		RESET,
-		ADRASSIGN,
-		ADRREQ,
-		ADRREQRES;
+		RESET		(0),
+		ADRASSIGN	(8),
+		SYNC		(12),
+		ADRELEASE	(13),
+		ADRREQ		(14),
+		ADRREQRES	(15);
+		
+		/* Constructor */
+		private final int stdidop;
+		private StndFrmOp(int op) {
+			this.stdidop = op;
+		}
+		
+		/* Returns the op code for this EmCAN extended frame operation */
+		public int toCode() {
+			return this.stdidop;
+		}
 	}
 	
 	/*
@@ -216,13 +229,15 @@ public class CommsThread extends Thread {
 		STROUT		(1022),
 		STRIN		(1023);
 		
-		private final int frmidop;
+		/* Constructor */
+		private final int extidop;
 		private ExtdFrmOp(int op) {
-			this.frmidop = op;
+			this.extidop = op;
 		}
 		
+		/* Returns the op code for this EmCAN  extended operation */
 		public int toCode() {
-			return this.frmidop;
+			return this.extidop;
 		}
 	}
 	
@@ -278,9 +293,15 @@ public class CommsThread extends Thread {
 		CONTINUATION		(1 << 13),
 		TO_BE_CONTINUED		(1 << 12);
 		
+		/* Constructor */
 		private final int idflgs;
 		private ExtdFrmFlg(int flg) {
 			this.idflgs = flg;
+		}
+		
+		/* Returns the flag */
+		public int toCode() {
+			return this.idflgs;
 		}
 	}
 	

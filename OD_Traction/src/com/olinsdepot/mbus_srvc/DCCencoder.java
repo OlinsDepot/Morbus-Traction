@@ -1,6 +1,8 @@
 package com.olinsdepot.mbus_srvc;
 
+import java.nio.ByteBuffer;
 import android.os.Bundle;
+import android.util.Log;
 
 /**
  * The DCC encoder object is created with the characteristics, (address etc.)
@@ -12,175 +14,417 @@ import android.os.Bundle;
  */
 public class DCCencoder {
 	
-	// Decoder Parameters
+	/* Encoder parameters */
 	private byte[] dcdrAdr;
-	private int spdFmt;
-	private byte[] funK;
+	private int dcdrNumSteps;
+	private DCCfunctionkeys fkState;
 	
-	// Decoder Instructions
-	private static enum DccInst {
-		DCD_CTL		(0x00),
-		ADV_OPS		(0x20),
-		RVS_SPD		(0x40),
-		FWD_SPD		(0x60),
-		F_GRP_1		(0x80),
-		F_GRP_2		(0xA0),
-		FTR_EXP		(0xC0),
-		CV_ACCS		(0xE0);
-		
-		private final int instruction;		
+	/* Morbus Stream DCC control byte */
+	//TODO rep count to be determined by an app setting
+	private static final byte REP_CNT = (byte) 0x05;
+	private static final byte REP_FVR = (byte) 0x80;
+	
+	/* Address Partition Code */
+	private static enum ADR_TYP {
+		MF_DCDR_SHORT	(0b00000000),
+		ACC_DCDR		(0b10000000),
+		MF_DCDR_LONG	(0b11000000);
 
-		DccInst (int theInstruction) {
-			this.instruction = theInstruction;
+		/* Constructor */
+		private final int insType;		
+		ADR_TYP (int theInsType) {
+			this.insType = theInsType;
 		}
 		
-		public byte op() {return (byte) this.instruction;}
-		
+		/* Return code for this instruction */
+		public byte toCode() {
+			return (byte) this.insType;
+		}
 	}
 	
+	/* Decoder Instruction groups */
+	private static enum DCC_INS {
+		DCD_CTL		(0b00000000),
+		ADV_OPS		(0b00100000),
+		RVS_SPD		(0b01000000),
+		FWD_SPD		(0b01100000),
+		F_GRP_1		(0b10000000),
+		F_GRP_2		(0b10100000),
+		FTR_EXP		(0b11000000),
+		CV_ACCS		(0b11100000);
+		
+		/* Constructor */
+		private final int insType;		
+		DCC_INS (int theInsType) {
+			this.insType = theInsType;
+		}
+		
+		/* Return code for this instruction */
+		public byte toCode() {
+			return (byte) this.insType;
+		}
+	}
+	
+	/* Decoder Control type instructions */
+	private static enum DCD_CTL_INS {
+		RESET 			(0b00000),
+		HRD_RST			(0b00001),
+		SET_FLG			(0b00110),
+		SET_ADV_ADR		(0b01010),
+		DCD_ACQ_REQ		(0b01111),
+		CNST_NORM		(0b10010),
+		CNST_REV		(0b10011);
+		
+		/* Constructor */
+		private final int insCode;		
+		DCD_CTL_INS (int theInsCode) {
+			this.insCode = theInsCode;
+		}
+		
+		/* Return code for this instruction */
+		public byte toCode() {
+			return (byte) this.insCode;
+		}
+	}
+	
+	/* Advanced Ops type instructions */
+	private static enum ADV_OPS_INS {
+		EXTD_SPD_STEP	(0b11111),
+		RSTD_SPD_STEP	(0b11110),
+		ANALOG_FUNC		(0b11101);
+		
+		/* Constructor */
+		private final int insCode;		
+		ADV_OPS_INS (int theInsCode) {
+			this.insCode = theInsCode;
+		}
+		
+		/* Return code for this instruction */
+		public byte toCode() {
+			return (byte) this.insCode;
+		}
+	}
+	
+	/* Feature Expansion type instructions */
+	private static enum FTR_EXP_INS {
+		BIN_CTL_LONG	(0b00000),
+		BIN_CTL_SHORT	(0b11101),
+		F_GRP_3			(0b11110),
+		F_GRP_4			(0b11111);
+		
+		/* Constructor */
+		private final int insCode;		
+		FTR_EXP_INS (int theInsCode) {
+			this.insCode = theInsCode;
+		}
+		
+		/* Return code for this instruction */
+		public byte toCode() {
+			return (byte) this.insCode;
+		}
+	}
+
+	
 	/**
-	 * Constructor sets decoder characteristics
-	 * @param newDcdr
+	 * Constructor
+	 * 
+	 * sets this encoder's characteristics from argument bundle.
+	 * 
+	 * @param newDcdr  Bundle of decoder characteristics.
 	 */
-	DCCencoder (Bundle newDcdr) {
-		// Unpack this decoder's address
-		boolean adrTypX = newDcdr.getBoolean("ADR_TYP_X");
+	protected DCCencoder (Bundle newDcdr) {
+
 		int theAddr = newDcdr.getInt("DCDR_ADR");
-		if (adrTypX) {
-			this.dcdrAdr = new byte[2];
-			this.dcdrAdr[0] = (byte)(0xC0 | ((theAddr >> 8) & 0x3F));
-			this.dcdrAdr[1] = (byte)(theAddr & 0xFF);
-		} else {
+		int theDcdrTyp = newDcdr.getInt("ADR_TYP");
+		int theFkeyStates = newDcdr.getInt("KEY_STATES");
+		
+		/* Create byte array containing the address for target decoder in correct format. */
+		switch (theDcdrTyp) {
+		/* Address type 0 - Mobile decoder, short address */
+		case 0:
 			this.dcdrAdr = new byte[1];
 			this.dcdrAdr[0] = (byte)(theAddr & 0x7F);
+		/* Address type 1 - Mobile decoder, long address */
+		case 1:
+			this.dcdrAdr = new byte[2];
+			this.dcdrAdr[0] = (byte)(ADR_TYP.MF_DCDR_LONG.toCode() | ((theAddr >> 8) & 0x3F));
+			this.dcdrAdr[1] = (byte)(theAddr & 0xFF);
+		/* Address type 2 - Accessory decoder, 9 and 11 bit address */
+		case 2:
+			this.dcdrAdr = new byte[2];
+			this.dcdrAdr[0] = (byte)(ADR_TYP.ACC_DCDR.toCode() | ((theAddr >> 8) & 0x3F));
+			this.dcdrAdr[1] = (byte)(theAddr & 0x1F);
+		/* Unexpected decoder address type */
+		default:
+			Log.d("DCCencoder", "Unknown decoder type" + theDcdrTyp);
+			
 		}
 		
-		// Save speed step format
-		this.spdFmt = newDcdr.getInt("SPD_FMT");
+		/* Save speed step format */
+		this.dcdrNumSteps = newDcdr.getInt("SPD_STEPS");
 		
-		// Get function key status.
-		this.funK = newDcdr.getByteArray("FUNC_KEY");
+		/* Init function key states. */
+		this.fkState = new DCCfunctionkeys(theFkeyStates);
+	
 	}
 	
 	
 	/**
-	 * Encode reset command
-	 * @return DCC byte string to reset this decoder.
+	 * DCCreset:
+	 * 
+	 * Encode a "soft" reset command for this decoder.
+	 * 
+	 * @return DCC encoded byte string.
 	 */
-	public byte[] DCCreset () {
-		//TODO implement reset method
-		byte[] encoderBuf = null;
+	protected byte[] DCCreset () {
 		
-		return encoderBuf;
+		/* This is a one byte command */
+		ByteBuffer dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 2);
+		dccCmd.put(REP_CNT);		/* Stream command with repetition count. */
+		dccCmd.put(this.dcdrAdr);	/* The decoder's address */
+		dccCmd.put((byte)(DCC_INS.DCD_CTL.toCode() | DCD_CTL_INS.RESET.toCode()));
+		
+		return dccCmd.array();
 		
 	}
 	
 	/**
-	 * Encode speed/dir command
-	 * @param speed
-	 * @return DCC byte string to set speed step this decoder.
+	 * DCCspeed:
+	 * 
+	 * Encode speed and direction command in the format for this decoder
+	 * 
+	 * @param speed  integer from -126 to 126
+	 * @return DCC encoded byte string.
 	 */
-	byte[] DCCspeed (int speed) {
+	protected byte[] DCCspeed (int speed) {
 		
-		byte[] encoderBuf = null;
-		int throttleStep;
-		int indx = this.dcdrAdr.length;
-		//TODO 14 bit addressing.
-		//TODO encode speed of zero as normal Stop.
-		switch (this.spdFmt) {
+		ByteBuffer dccCmd = null;
+		int throttleStep = 0;
+		int direction = 0;
+		
+		/* Set direction and scale speed for this decoders speed step format */
+		if (speed < 0) {
+			direction = 0;
+			throttleStep = -speed * (this.dcdrNumSteps/126);
+		} else {
+			direction = 1;
+			throttleStep = speed *(this.dcdrNumSteps/126);
+		}
 
-		case 0:
-			//TODO implement 14 step format
-			//Setup buffer for a 1 byte instruction
-			encoderBuf = new byte[indx + 1];
-			System.arraycopy(this.dcdrAdr, 0, encoderBuf, 0, indx);
+		/* Format the speed step command as required by this decoder. */
+		switch (this.dcdrNumSteps) {
+		/* 14 step format */
+		case 14:
+			/* Setup buffer for a 1 byte instruction */
+			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 2);
 			
-			// Set direction and throttle step for 14 step decoder
+			/* If Step is not 0 (STOP), command repeats forever and step is adjusted to skip Stop commands. */
+			if (throttleStep > 0) {
+				dccCmd.put(REP_FVR);
+				throttleStep += 1;
+			} else {
+				dccCmd.put(REP_CNT);
+			}
+			
+			/* Put this decoder's address into the command. */
+			dccCmd.put(this.dcdrAdr);
+			
+			/* Add direction, head light state and throttle step to create speed command. */
+			if (direction == 1) {
+				dccCmd.put((byte)(DCC_INS.FWD_SPD.toCode() | (this.fkState.get(0) << 4) | (throttleStep & 0x0F)));
+			} else {
+				dccCmd.put((byte)(DCC_INS.RVS_SPD.toCode() | (this.fkState.get(0) << 4) | (throttleStep & 0x0F)));				
+			}
 			break;
+
+		/* 28 step format */
+		case 28:
+			/* Setup buffer for a 1 byte instruction */
+			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length +1);
 			
-		case 1:
-			//TODO implment 28 step format
-			//Setup buffer for a 1 byte instruction
-			encoderBuf = new byte[indx + 1];
-			System.arraycopy(this.dcdrAdr, 0, encoderBuf, 0, indx);
+			/* If Step is not 0 (STOP), command repeats forever and step is adjusted to skip Stop commands. */
+			/* If it is Stop, it is repeated for the standard number of times. */
+			if (throttleStep > 0) {
+				dccCmd.put(REP_FVR);
+				throttleStep += 4;
+			} else {
+				dccCmd.put(REP_CNT);
+			}
 			
-			//Set direction and throttle step for 28 step decoder
+			/* Put this decoder's address into the command. */
+			dccCmd.put(this.dcdrAdr);
+			
+			/* Add direction and throttle step to create speed command. */
+			if (direction == 1) {
+				dccCmd.put((byte)(DCC_INS.FWD_SPD.toCode() | ((throttleStep & 0x01) << 4) | ((throttleStep >> 1) & 0x0F)));
+			} else {
+				dccCmd.put((byte)(DCC_INS.RVS_SPD.toCode() | ((throttleStep & 0x01) << 4) | ((throttleStep >> 1) & 0x0F)));				
+			}
 			break;
-			
-		case 2:
-			//Setup buffer for a 2 byte instruction
-			encoderBuf = new byte[indx + 2];
-			System.arraycopy(this.dcdrAdr, 0, encoderBuf, 0, indx);
-			
-			// Set direction and throttle step for 126 step decoder.
-			if (speed < 0) throttleStep = (-speed & 0x7F);
-			else if (speed > 0) throttleStep = (0x80 | (speed & 0x7F));
-			else throttleStep = 0;
-//			encoderBuf[0] = (byte) 0x07;
-//			encoderBuf[1] = (byte) 0x04;
-//			encoderBuf[2] = (byte) 0x00;
-//			encoderBuf[3] = (byte) 0x19;
-//			encoderBuf[4] = (byte) 0x00;
-//			encoderBuf[5] = (byte) 0x00;
-//			encoderBuf[6] = (byte) 0x80;
-//			encoderBuf[7] = this.dcdrAdr;
-//			encoderBuf[0] = (byte) 0x3F;  //extended command + speedStep
-			encoderBuf[indx] = (byte)(DccInst.FTR_EXP.op() | 0x0F); //extended command + speedstep sub command
-			encoderBuf[indx + 1] = (byte)throttleStep;
-			break;
-		}
 		
-		return encoderBuf;
+		/* 126 step format */
+		case 126:
+			/* Setup buffer for a 2 byte instruction */
+			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length +3);
+			
+			/* If Step is not 0 (STOP), command repeats forever and step is adjusted to skip Stop commands. */
+			/* If it is Stop, it is repeated for the standard number of times. */
+			if (throttleStep > 0) {
+				dccCmd.put(REP_FVR);
+				throttleStep += 1;
+			} else {
+				dccCmd.put(REP_CNT);
+			}
+			
+			/* Put this decoder's address into the command. */
+			dccCmd.put(this.dcdrAdr);
+			
+			/* Create first byte of command from ADV_OPS command + Extended Speed step subcommand.  */
+			dccCmd.put((byte)(DCC_INS.ADV_OPS.toCode() | ADV_OPS_INS.EXTD_SPD_STEP.toCode()));
+
+			/* Add direction and throttle step in the second byte. */
+			dccCmd.put((byte)((direction << 7) | (throttleStep & 0x7F)));
+			break;
+			
+			/* unexpected speed step format */
+			default:
+				Log.d("DCCencoder", "Unknown speed step type" + this.dcdrNumSteps);
+				
+			
+		}  /* switch(spdFmt) */
 		
+		return dccCmd.array();
 	}
 	
 	/**
-	 * Encode eStop command
-	 * @return DCC byte string for Emergency Stop for this decoder.
+	 * DCCestop:
+	 * 
+	 * Encode an Emergency Stop command for this decoder.
+	 * 
+	 * @return DCC encoded byte string.
 	 */
-	byte[] DCCestop () {
-		byte[] encoderBuf = null;
+	protected byte[] DCCestop () {
+
+		ByteBuffer dccCmd = null;
+		final int ESTOP_CMD = 1;
 		
-		switch (this.spdFmt) {
-		
-		case 0:
-			//TODO implement estop for 14 step format
+		/* Format command for this decoder's speed type */
+		switch (this.dcdrNumSteps) {
+		/* estop for 14 step format */		
+		case 14:
+			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 2);
+			dccCmd.put(REP_CNT);
+			dccCmd.put((byte)(DCC_INS.RVS_SPD.toCode() | ESTOP_CMD));
+			break;
+		/* estop for 28 step format */	
+		case 28:
+			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 2);
+			dccCmd.put(REP_CNT);
+			dccCmd.put((byte)(DCC_INS.RVS_SPD.toCode() | ESTOP_CMD));
+			break;
+		/* estop for 126 step format */
+		case 126:
+			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 3);
+			dccCmd.put(REP_CNT);
+			
+			/* Create first byte of command from ADV_OPS command + Extended Speed step subcommand.  */
+			dccCmd.put((byte)(DCC_INS.ADV_OPS.toCode() | ADV_OPS_INS.EXTD_SPD_STEP.toCode()));
+
+			/* Add direction and throttle step in the second byte. */
+			dccCmd.put((byte)ESTOP_CMD);
 			break;
 			
-		case 1:
-			//TODO implement estop for 28 step format
-			break;
-			
-		case 2:
-			//TODO implement estop for 126 step format
-			break;
+			/* unexpected speed step format */
+		default:
+			Log.d("DCCencoder", "Unknown speed step type" + this.dcdrNumSteps);				
 		}
-		//TODO encode emergency stop command
-		return encoderBuf;
+
+		return dccCmd.array();
 	}
 		
 	/**
-	 * Encode Function command
-	 * @param funcKey
+	 * DCCfunc
+	 * 
+	 * Encode a Function command
+	 * 
+	 * @param funcKey =  # (from 0 to 28) of function key activated
+	 * @param val  0= function off, not 0 = function on.
 	 * @return Byte string for function command for this decoder.
 	 */
-	byte[] DCCfunc (int funcKey) {
-		//TODO implement functions
-		byte[] encoderBuf = null;
+	protected byte[] DCCfunc (int funcKey, int onOff) {
+
+		ByteBuffer dccCmd = null;
+
 		
+		/* Update function key state and get bit vector */
+		this.fkState.set(funcKey, (onOff != 0));
+		
+		/* FL and F1 - F4 */
 		if (funcKey <= 4) {
-			//FL and F1-F4
-		} else if (funcKey <= 12) {
-			//F5 through F12
-		} else if (funcKey <= 20){
-			//F13 through F20
-		} else if (funcKey <= 28) {
-			//F21 through F28
-		} else {
-			//throw an invalid format error.
+			
+			/* Create a buffer for a one byte command and set the control byte. */
+			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 2);
+			dccCmd.put(REP_CNT);
+			
+			/* Create the instruction byte from the instruction opcode, the fl state and F1 - F4 state. */
+			dccCmd.put((byte)(DCC_INS.F_GRP_1.toCode() | ((this.fkState.get(0)) << 4) | fkState.get(1, 4) ));
+			
+		}
+		/* F5 - F8 */
+		else if (funcKey <= 12) {
+			
+			/* Create a buffer for a one byte command and set the control byte. */
+			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 2);
+			dccCmd.put(REP_CNT);
+
+			/* create the instruction byte from the instruction opcode and the F5 to F8 state. */
+			dccCmd.put((byte)(DCC_INS.F_GRP_2.toCode() | this.fkState.get(5, 8) ));
+		}
+		/* F9 - F12 */
+		else if (funcKey <= 12) {
+			
+			/* Create a buffer for a one byte command and set the control byte. */
+			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 2);
+			dccCmd.put(REP_CNT);
+
+			/* create the instruction byte from the instruction opcode, the group 2 flag and the F9 to F12 state. */
+			dccCmd.put((byte)(DCC_INS.F_GRP_2.toCode() | 0x10 | this.fkState.get(9, 12) ));				
+		}
+		/* F13 - F20 */
+		else if (funcKey <= 20){
+			
+			/* Create a buffer for a two byte command and set the control byte. */
+			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 3);
+			dccCmd.put(REP_CNT);
+			
+			/* Create instruction byte from Feature Extension opcode and Function Control sub-opcode. */
+			dccCmd.put((byte)(DCC_INS.FTR_EXP.toCode() | FTR_EXP_INS.F_GRP_3.toCode()));
+			
+			/* Create data byte with state of F13 to F20 */
+			dccCmd.put((byte)fkState.get(13,20));
+		}
+		/* F21 - F28 */
+		else if (funcKey <= 28) {
+			
+			/* Create a buffer for a two byte command and set the control byte. */
+			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 3);
+			dccCmd.put(REP_CNT);
+			
+			/* Create instruction byte from Feature Extension opcode and Function Control sub-opcode. */
+			dccCmd.put((byte)(DCC_INS.FTR_EXP.toCode() | FTR_EXP_INS.F_GRP_4.toCode()));
+			
+			/* Create data byte with state of F21 to F28 */
+			dccCmd.put((byte)fkState.get(21,28));
+		}
+		/* throw an invalid argument error. */
+		else {
+			Log.d("DCCencoder", "Invalid FuncKey arg" + funcKey);				
 		}
 		
-		return encoderBuf;
+		return dccCmd.array();
 	}
+	
+	//TODO Add methods to add / remove decoder from a consist
+	//TODO Add methods to write CVs.
 }
 
