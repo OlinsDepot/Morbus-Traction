@@ -351,13 +351,13 @@ public class DCCencoder {
 	 * @param val  0= function off, not 0 = function on.
 	 * @return Byte string for function command for this decoder.
 	 */
-	protected byte[] DCCfunc (int funcKey, int onOff) {
+	protected byte[] DCCfunc (int funcKey, boolean onOff) {
 
 		ByteBuffer dccCmd = null;
 
 		
 		/* Update function key state and get bit vector */
-		this.fkState.set(funcKey, (onOff != 0));
+		this.fkState.set(funcKey, onOff);
 		
 		/* FL and F1 - F4 */
 		if (funcKey <= 4) {

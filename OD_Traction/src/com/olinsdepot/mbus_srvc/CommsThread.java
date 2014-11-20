@@ -5,8 +5,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import java.net.Socket;
+import java.nio.ByteBuffer;
 
 import java.util.Arrays;
+import java.util.Timer;
+import java.util.TimerTask;
+
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -16,6 +20,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.Process;
+import android.os.RemoteException;
 
 
 /**
@@ -35,11 +40,11 @@ public class CommsThread extends Thread {
 	 * Commands supported by Comms thread
 	 */
 	public static enum CommsCmd {
-		CLOSE,
-		SND_DCC,
 		SND_STREAM,
+		SND_BCST,
 		SND_PORT,
-		SND_KEEPALIVE;
+		CLOSE;
+		
 		/* Returns the code for this Comms command. */
 		public int toCode() {
 			return this.ordinal();
@@ -85,6 +90,12 @@ public class CommsThread extends Thread {
 	private static Looper mCommsSendLooper;
 	private static Handler mCommsSendHandler;
 
+	/* 
+	 * Keep alive thread
+	 */
+	static final int UPDATE_INTERVAL = 50000;
+	private Timer keepLiveTimer = new Timer();
+
 	/*
 	 *  Server state shared with the send and receive threads
 	 */
@@ -97,7 +108,6 @@ public class CommsThread extends Thread {
 	/*
 	 * Synchronize the server state between the transmit and receive threads.
 	 */
-
 	private  class SrvrState {
 		
 		private SrvStates myState;
@@ -114,6 +124,10 @@ public class CommsThread extends Thread {
 	SrvrState mSrvrState = new SrvrState();
 	
 	/*
+	 * Various EmCAN commands and responses.
+	 */
+	
+	/**
 	 * EMCAN stream op codes.
 	 */
 	private static enum EmCanCmd {
@@ -131,19 +145,19 @@ public class CommsThread extends Thread {
 		KEEPALIVE	(11),
 		STROUT		(12);
 		
-		// Constructor
+		/* Constructor */
 		private final int opcode;		
 		private EmCanCmd(int op) {
 			this.opcode = op;
 		}
 		
-		// Returns the value of this EmCAN command
+		/* Returns the code for this EmCAN command */
 		public byte toCode() {
 			return (byte) this.opcode;
 		}
 	}
 
-	/*
+	/**
 	 * EMCAN Stream response codes
 	 */
 	private static enum EmCanRsp {
@@ -186,7 +200,7 @@ public class CommsThread extends Thread {
 		}
 	}
 	
-	/*
+	/**
 	 * Standard Frame Opcodes
 	 */
 	private static enum StndFrmOp {
@@ -209,7 +223,7 @@ public class CommsThread extends Thread {
 		}
 	}
 	
-	/*
+	/**
 	 * Extended Frame Opcodes
 	 */
 	private static enum ExtdFrmOp {
@@ -241,49 +255,8 @@ public class CommsThread extends Thread {
 		}
 	}
 	
-	/*
-	 * MorBUS broadcast extended frames
-	 */
-	private static enum MbusBcstOp {
-		OFF		(0),
-		STOP	(1),
-		ON		(2),
-		DCC		(3),
-		DCCRES	(4);
-		
-		/* Constructor */
-		private final int bcstop;
-		private MbusBcstOp(int op) {
-			this.bcstop = op;
-		}
-		
-		/* Returns the code for this Mbus broadcast operation. */
-		public int toCode() {
-			return this.bcstop;
-		}
-	}
 	
-	/*
-	 * MorBUS node-specific extended frames
-	 */
-	private static enum MbusNodeOp {
-		DCCINIT	(0),
-		DCC		(1),
-		DCCRES	(2);
-		
-		/* Constructor */
-		private final int  nodeop;
-		private MbusNodeOp(int op) {
-			this.nodeop = op;
-		}
-		
-		/* Returns the code for this Mbus node-specific operation. */
-		public int toCode() {
-			return this.nodeop;
-		}
-	}
-	
-	/*
+	/**
 	 * EmCAN ID field bit definitions
 	 */
 	private static enum ExtdFrmFlg {
@@ -424,6 +397,9 @@ public class CommsThread extends Thread {
 		                
 		                // Update server state to "Connected, ready for commands"
 			                mSrvrState.set(SrvStates.READY);
+
+		                //Start a thread to send keep alive commands every 50 seconds
+						KeepAliveThread();
 					}
 				}
 				break;
@@ -480,7 +456,8 @@ public class CommsThread extends Thread {
 	 */
 	private final class CommsSendHandler extends Handler {
 		
-		private byte sndBuf[];
+		private ByteBuffer sndBuf;
+		private byte[] datBuf;
 		
 		// Constructor
 		public CommsSendHandler(Looper looper) {
@@ -503,30 +480,41 @@ public class CommsThread extends Thread {
 			}
 			*/
 			
-			// Dispatch this service command
+			// Dispatch this send command
 			switch (CommsCmd.fromCode(msg.what)) {
-			case CLOSE:
-				break;
-				
-			case SND_STREAM:
-				break;
 			
-			case SND_DCC:
-				if (L) Log.i("CommsSendHandler", "tID=" + msg.arg1 + "speed=" +msg.arg2);
+			/* Send the Byte Stream Protocol opcode byte passed in ARG1. */
+			case SND_STREAM:
+				sndBuf = ByteBuffer.allocate(1);
+				sndBuf.put((byte)msg.arg1);
+				write(sndBuf.array());
+				break;
+
+			/* Send a broadcast extended EmCAN frame with ARG1 = opcode, OBJ = data. */
+			case SND_BCST:
 				
-				DCCencoder Unit = (DCCencoder) msg.obj;
+				/* Get the data & create a send buffer, based on data length. */
+				datBuf = (byte[]) msg.obj;
+				// TODO add check on length of datBuf.
+				sndBuf = ByteBuffer.allocate(6 + datBuf.length);
 				
-				sndBuf = Unit.DCCspeed(msg.arg2);
-				write(sndBuf);
+				/* Build the EmCAN frame. */
+				sndBuf.put(EmCanCmd.SENDE.toCode());	/* stream command */
+				sndBuf.put((byte) datBuf.length);		/* # of CAN data bytes */
+				sndBuf.putInt(getExID(msg.arg1, 0));		/* generate EmCAN ID */
+				sndBuf.put(datBuf);						/* CAN data */
+
+				write(sndBuf.array());
 
 				break;
+			
+			/* Send a port specific EmCAN frame with ARG1 = opcode, ARG2 = node, OBJ = data. */
+			case SND_PORT:
+				break;
 				
-			case SND_KEEPALIVE:
-				if (L) Log.i("CommsSendHandler", "Sending Keep_alive");
-				
-				sndBuf = new byte[1];
-				sndBuf[0] = EmCanCmd.KEEPALIVE.toCode();
-				write(sndBuf);
+			/* Close the socket. */
+			case CLOSE:
+				cancel();
 				break;
 				
 			default:
@@ -568,7 +556,39 @@ public class CommsThread extends Thread {
 			Log.d(TAG, e.getLocalizedMessage());
 		}
 	}
+	
+	/**
+	 * Return a 32 bit integer containing the 32 bit extended ID
+	 * for an EmCAN external stream frame.
+	 */
+	private int getExID(int op, int node) {
+		int emcanId = 0;
+		// TODO right now, only supports broadcast.
+		
+		if (node == 0) {
+			emcanId |= (op << 19);
+			emcanId |= ExtdFrmFlg.NEW_DATA.toCode();
+		}
+		
+		return emcanId;
+	}
 
+	/**
+	 * Keep Alive Thread. Posts a keep-alive message to the send queue every 50 seconds.
+	 *
+	 */
+	private void KeepAliveThread () {
+		keepLiveTimer.scheduleAtFixedRate(new TimerTask() {
+			public void run() {
+				Log.d(TAG, "KeepAliveTask");
+				if (L) Log.i("CommsSendHandler", "Sending Keep_alive");
+				
+				byte[] sndBuf = new byte[1];
+				sndBuf[0] = EmCanCmd.KEEPALIVE.toCode();
+				write(sndBuf);
+			}
+		}, 0, UPDATE_INTERVAL);
+	}
 	
 	/**
 	 * Bytes to Hex String: Utility function

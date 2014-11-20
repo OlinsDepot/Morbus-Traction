@@ -12,7 +12,6 @@ import android.os.Messenger;
 import android.os.Process;
 import android.os.RemoteException;
 import android.util.Log;
-import android.util.SparseArray;
 import android.widget.Toast;
 
 import java.util.Timer;
@@ -46,19 +45,22 @@ public class MbusService extends Service {
 	 *  Morbus service commands
 	 */
 	public static enum MbusSrvcCmd {
-		CONNECT,
-		DISCONNECT,
-		POWER_ON,
-		POWER_OFF,
-		POWER_IS,
-		EMRG_STOP,
-		ACQ_DECODER,
-		RLS_DECODER,
-		THTL_STEP,
-		HARD_STOP;
+		SRVR_CNCT,
+		SRVR_DSCNCT,
+		SRVR_PWR_ON,
+		SRVR_PWR_OFF,
+		SRVR_PWR_IS,
+		SRVR_EMRG_STOP,
+		DCC_BCST_RESET,
+		DCC_ACQ_DCDR,
+		DCC_RLS_DCDR,
+		DCC_RST_DCDR,
+		DCC_THTL_STEP,
+		DCC_HARD_STOP,
+		DCC_FUNC_KEY;
 		
 		/* Returns the code for this MorBus Service command */
-		public int toCode() {
+	   public int toCode() {
 			return this.ordinal();
 		}
 		
@@ -72,9 +74,11 @@ public class MbusService extends Service {
 	 * Morbus service events
 	 */
 	public static enum MbusSrvcEvt {
-		CONNECTED,
-		DISCONNECTED,
-		PORT_ON;
+		SRVR_CNCTD,
+		SRVR_DSCNCTD,
+		SRVR_PWR_IS,
+		DCC_DCDR_ACQD,
+		DCC_DCDR_RLSD;
 
 		/* Return the code for this MorBus Service event. */
 		public int toCode() {
@@ -88,6 +92,90 @@ public class MbusService extends Service {
 		
 	}
 	
+	/**
+	 * Morbus byte stream commands
+	 */
+	private static enum MbusStrCmd {
+		OFF		(64),
+		STOP	(65),
+		ON		(66),
+		ONOFF	(67),
+		MVAL	(68),
+		DCC		(69);
+		/* Constructor */
+		private final int strop;
+		private MbusStrCmd(int op) {
+			this.strop = op;
+		}
+		
+		/* Returns the code for this Mbus broadcast operation. */
+		public int toCode() {
+			return this.strop;
+		}
+	}
+	
+	/**
+	 * Morbus byte stream responses
+	 */
+	private static enum MbusStrRsp {
+		ONOFF	(64),
+		MVAL	(65),
+		SHORT	(66);
+		
+		/* Constructor */
+		private final int strrsp;
+		private MbusStrRsp(int rsp) {
+			this.strrsp = rsp;
+		}
+		
+		/* Returns the code for this Mbus broadcast operation. */
+		public int toCode() {
+			return this.strrsp;
+		}
+	}
+	
+	/**
+	 * MorBUS broadcast frames
+	 */
+	private static enum MbusBcstOp {
+		OFF		(0),
+		STOP	(1),
+		ON		(2),
+		DCC		(3),
+		DCCRES	(4);
+		
+		/* Constructor */
+		private final int bcstop;
+		private MbusBcstOp(int op) {
+			this.bcstop = op;
+		}
+		
+		/* Returns the code for this Mbus broadcast operation. */
+		public int toCode() {
+			return this.bcstop;
+		}
+	}
+	
+	/**
+	 * MorBUS node-specific extended frames
+	 */
+	private static enum MbusNodeOp {
+		DCCINIT	(0),
+		DCC		(1),
+		DCCRES	(2);
+		
+		/* Constructor */
+		private final int  nodeop;
+		private MbusNodeOp(int op) {
+			this.nodeop = op;
+		}
+		
+		/* Returns the code for this Mbus node-specific operation. */
+		public int toCode() {
+			return this.nodeop;
+		}
+	}
+
 
 	/*
 	 * Thread to handle the upward interface to GUI client. It receives commands from the GUI
@@ -110,17 +198,13 @@ public class MbusService extends Service {
 	private static Messenger mSrvcToCommsMsgr;
 
 	
-	// Keep alive thread
-	static final int UPDATE_INTERVAL = 50000;
-	private Timer timer = new Timer();
-	
 	// Registered decoders for throttle commands
 	private DCCencoder regDecoders[];
 
 
-	//
-	// Service life cycle call backs
-	//
+	/*
+	 * Service life cycle call backs
+	 */
 	
 	/**
 	 *  Create new MorBus service.
@@ -156,7 +240,7 @@ public class MbusService extends Service {
 	public void onDestroy() {
 		if (L) Log.i(TAG, "Mbus Service Stopping");
 		Message msg = mClientToSrvcHandler.obtainMessage();
-		msg.what = MbusSrvcEvt.DISCONNECTED.toCode();
+		msg.what = MbusSrvcEvt.SRVR_DSCNCTD.toCode();
 		mClientToSrvcHandler.sendMessage(msg);
 
 		super.onDestroy();
@@ -183,19 +267,21 @@ public class MbusService extends Service {
 		@Override
 		public void handleMessage(Message msg) {
 			if (L) Log.i(TAG,"MBUS Client Msg Hdlr msg = " + msg.what);
+			
+			Message mCommsMsg;
 		
-			// Dispatch the incoming message based on 'what'.
+			/* Dispatch the incoming message based on 'what'. */
 			switch (MbusSrvcCmd.fromCode(msg.what)) {
 			
-			// Connect to the server.
-			case CONNECT:
-				// Get IP information for the target server
+			/* Connect to the server. */
+			case SRVR_CNCT:
+				/* Get IP information for the target server. */
 				Bundle mSrvrIP = (Bundle)msg.obj;
 				
-				// Register the Client's handler for messages from the service.
+				/* Register the Client's handler for messages from the service. */
 				mSrvcToClientMsgr = msg.replyTo;
 	
-				// Extract IP info and create a socket. Start Comms Thread on new Socket.
+				/* Extract IP info and create a socket. Start Comms Thread on new Socket. */
 				String mAddr = mSrvrIP.getString("IP_ADR");
 				int mPort = Integer.parseInt(mSrvrIP.getString("IP_PORT"));
 				
@@ -212,42 +298,172 @@ public class MbusService extends Service {
 				catch (IOException e) {
 					Log.d(TAG, e.getLocalizedMessage());
 				}
-
-				//Start a thread to send keep alive commands every 50 seconds
-				KeepAliveThread();
 				
-				//Create array to hold DCC encoders registered to each throttle. (4 max);
+				/*Create array to hold DCC encoders registered to each throttle. (4 max); */
 				regDecoders = new DCCencoder[4];
 
-				// Announce service startup
+				/* Announce service startup */
 				Toast.makeText(getApplicationContext(), "Mbus Service Started", Toast.LENGTH_SHORT).show();
 				break;
 			
-			// Disconnect the server and shut down the service.
-			case DISCONNECT:
+			/* Disconnect the server and shut down the service. */
+			case SRVR_DSCNCT:
 				//Shut down service
 				//TODO Close socket and cancel related tasks, then shutdown the service.
 				if (L) Log.i(TAG,"Stop comms thread");
 
-				Toast.makeText(getApplicationContext(), "Mbus Server Disconnected", Toast.LENGTH_SHORT).show();
+				Toast.makeText(getApplicationContext(), "Mbus Server Shutdown", Toast.LENGTH_SHORT).show();
 				break;
+			
+			/* Turn layout power on. */
+			case SRVR_PWR_ON:
+				mCommsMsg = Message.obtain();
+				mCommsMsg.what = CommsCmd.SND_STREAM.toCode();
+				mCommsMsg.arg1 = MbusStrCmd.ON.toCode();
 
-			//Register a target decoder to a throttle.
-			case ACQ_DECODER:
-				regDecoders[msg.arg1] = new DCCencoder((Bundle)msg.obj);
-				break;
-				
-			// Dispatch a change in throttle step for the decoder registered to the throttle in arg1.
-			case THTL_STEP:
-				Message SrvrMsg = Message.obtain(null, msg.what,msg.arg1,msg.arg2);
-				SrvrMsg.obj = regDecoders[msg.arg1];
 				try {
-					mSrvcToCommsMsgr.send(SrvrMsg);
+					mSrvcToCommsMsgr.send(mCommsMsg);
 	    		} catch (RemoteException e) {
 	    			e.printStackTrace();
 	    		}
 				
-			//Unknown command in message
+				break;
+				
+			/* Turn layout power off. */
+			case SRVR_PWR_OFF:
+				mCommsMsg = Message.obtain();
+				mCommsMsg.what = CommsCmd.SND_STREAM.toCode();
+				mCommsMsg.arg1 = MbusStrCmd.OFF.toCode();
+
+				try {
+					mSrvcToCommsMsgr.send(mCommsMsg);
+	    		} catch (RemoteException e) {
+	    			e.printStackTrace();
+	    		}
+				
+				break;
+				
+			/* Ask the server to report the layout power state. */
+			case SRVR_PWR_IS:
+				mCommsMsg = Message.obtain();
+				mCommsMsg.what = CommsCmd.SND_STREAM.toCode();
+				mCommsMsg.arg1 = MbusStrCmd.ONOFF.toCode();
+
+				try {
+					mSrvcToCommsMsgr.send(mCommsMsg);
+	    		} catch (RemoteException e) {
+	    			e.printStackTrace();
+	    		}
+				
+				break;
+				
+			case SRVR_EMRG_STOP:
+				mCommsMsg = Message.obtain();
+				mCommsMsg.what = CommsCmd.SND_STREAM.toCode();
+				mCommsMsg.arg1 = MbusStrCmd.STOP.toCode();
+
+				try {
+					mSrvcToCommsMsgr.send(mCommsMsg);
+	    		} catch (RemoteException e) {
+	    			e.printStackTrace();
+	    		}
+				
+				break;
+				
+			case DCC_BCST_RESET:
+				break;
+
+			/* 
+			 * Register a decoder to throttle in ARG1. OBJ = decoder characteristics
+			 * Notify main that decoder was acquired for throttle in ARG1.
+			 * */
+			case DCC_ACQ_DCDR:
+				regDecoders[msg.arg1] = new DCCencoder((Bundle)msg.obj);
+				
+	    		try {
+	    			mSrvcToClientMsgr.send(Message.obtain(null, MbusSrvcEvt.DCC_DCDR_ACQD.toCode(), msg.arg1));
+	    		} catch (RemoteException e) {
+	    			e.printStackTrace();
+	    		}
+				break;
+				
+			/*
+			 * De-register decoder assigned to the throttle specified by ARG1.
+			 * Notify main that decoder was released for throttle in ARG1.
+			 * */
+			case DCC_RLS_DCDR:
+				regDecoders[msg.arg1] =  null;
+				
+				//TODO Check settings to see if we need to send a STOP message to the decoder before release.
+				
+	    		try {
+	    			mSrvcToClientMsgr.send(Message.obtain(null, MbusSrvcEvt.DCC_DCDR_RLSD.toCode(), msg.arg1));
+	    		} catch (RemoteException e) {
+	    			e.printStackTrace();
+	    		}
+				break;
+			
+			/* Send a reset to the decoder assigned to the throttle specified by ARG1. */
+			case DCC_RST_DCDR:
+				mCommsMsg = Message.obtain();
+				mCommsMsg.what = CommsCmd.SND_BCST.toCode();
+				mCommsMsg.arg1 = MbusBcstOp.DCC.toCode();
+				mCommsMsg.obj = regDecoders[msg.arg1].DCCreset();
+
+				try {
+					mSrvcToCommsMsgr.send(mCommsMsg);
+	    		} catch (RemoteException e) {
+	    			e.printStackTrace();
+	    		}
+				
+				break;
+				
+			/* Send throttle step in ARG2 to the decoder registered to the throttle in ARG1. */
+			case DCC_THTL_STEP:
+				mCommsMsg = Message.obtain();
+				mCommsMsg.what = CommsCmd.SND_BCST.toCode();
+				mCommsMsg.arg1 = MbusBcstOp.DCC.toCode();
+				mCommsMsg.obj = regDecoders[msg.arg1].DCCspeed(msg.arg2);
+
+				try {
+					mSrvcToCommsMsgr.send(mCommsMsg);
+	    		} catch (RemoteException e) {
+	    			e.printStackTrace();
+	    		}
+				
+				break;
+
+			/* Send a hard stop command to the decoder registered to the throttle in Arg1. */
+			case DCC_HARD_STOP:
+				mCommsMsg = Message.obtain();
+				mCommsMsg.what = CommsCmd.SND_BCST.toCode();
+				mCommsMsg.arg1 = MbusBcstOp.DCC.toCode();
+				mCommsMsg.obj = regDecoders[msg.arg1].DCCestop();
+
+				try {
+					mSrvcToCommsMsgr.send(mCommsMsg);
+	    		} catch (RemoteException e) {
+	    			e.printStackTrace();
+	    		}
+				break;
+			
+			/* Send the function key specified by ARG2 to the decoder registered to the throttle in ARG1. */
+			case DCC_FUNC_KEY:
+				mCommsMsg = Message.obtain();
+				mCommsMsg.what = CommsCmd.SND_BCST.toCode();
+				mCommsMsg.arg1 = MbusBcstOp.DCC.toCode();
+				mCommsMsg.obj = regDecoders[msg.arg1].DCCfunc(msg.arg2, (boolean)msg.obj);
+
+				try {
+					mSrvcToCommsMsgr.send(mCommsMsg);
+	    		} catch (RemoteException e) {
+	    			e.printStackTrace();
+	    		}
+				
+
+				break;
+				
+			/* Unknown command in message */
 			default:
 				Log.d("MsgFromClient", "Unknown command type");
 				}
@@ -256,7 +472,7 @@ public class MbusService extends Service {
 
 	
 	/**
-	 * Message from Server: Parses server message and generates events
+	 * Handle messages from CommsThread. Parses server message and generates events
 	 * to be sent to the client.
 	 * 
 	 * @param msg - Message containing byte count and byte data sent from server.
@@ -265,18 +481,34 @@ public class MbusService extends Service {
 		@Override
 		public void handleMessage(Message msg)
 		{
-			// Dispatch event
+			
+			Message mClientMsg;
+			
+			/* Dispatch event received from CommsThread. */
 			switch (CommsEvt.fromCode(msg.what)) {
 			
+			/* CommsThread has started, save the messenger thread to send to. */
 			case START:
+				
+				// TODO add state to prevent sending messages to CommsThread before it's connected.
+				
 				mSrvcToCommsMsgr = msg.replyTo;
 				break;
+			
+			/* CommsThread has received a disconnect command and has stopped. */
+			case STOP:
+				// TODO think about what to do here.
+				break;
 
-			// Event = CONNECTED - save servers message handler.
+			/* CommsThread received ID from server, verifying connection. Notify main. */ 
 			case CONNECT:
-	    		Message msgClient = Message.obtain(null, 2);
+				
+				// TODO CommsThread will send remaining string from ID. Verify == MorBus.
+				
+				mClientMsg = Message.obtain();
+				mClientMsg.what = MbusSrvcEvt.SRVR_CNCTD.toCode();
 	    		try {
-	    			mSrvcToClientMsgr.send(msgClient);
+	    			mSrvcToClientMsgr.send(mClientMsg);
 	    		} catch (RemoteException e) {
 	    			e.printStackTrace();
 	    		}
@@ -288,32 +520,11 @@ public class MbusService extends Service {
 				//Unknown event in message
 				Log.d("CommsToSrvcHandler", "Unknown event type");
     			break;
-			}
-		}
-	};
-	
-	
-	
-	/**
-	 * Keep Alive Thread. Posts a keep-alive message to the send queue every 50 seconds.
-	 *
-	 */
-	private void KeepAliveThread () {
-		timer.scheduleAtFixedRate(new TimerTask() {
-			public void run() {
-				Log.d(TAG, "KeepAliveTask");
-				
-				if (mSrvcToCommsMsgr != null) {
-					//Send server a keep alive message.
-					Message SrvrMsg = Message.obtain(null,CommsCmd.SND_KEEPALIVE.toCode());
-					try {
-						mSrvcToCommsMsgr.send(SrvrMsg);
-		    		} catch (RemoteException e) {
-		    			e.printStackTrace();
-		    		}
-				}
-			}
-		}, 0, UPDATE_INTERVAL);
-	}
-	
+    			
+			}  //switch (CommsEvt)
+
+		}  //handleMessage(msg)
+
+	};  //CommsToSrvcHandler
+
 }
