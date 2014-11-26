@@ -58,7 +58,7 @@ public class MainActivity extends Activity implements
     private ServiceConnection mRailSrvcConnection = null;
     private boolean mSrvcBound = false;
     private Messenger mClientToSrvcMsgr = null;
- 	private final Messenger mSrvcToClientMsgr = new Messenger(new SrvcToClientHandler());
+ 	final Messenger mClientFmSrvcMsgr = new Messenger(new SrvcMsgHandler());
 
 
 	//
@@ -252,17 +252,18 @@ public class MainActivity extends Activity implements
      */
     @Override
     public void onServerChange(Bundle srvrIP) {
-    	Log.d(TAG,"onServerChange");
+    	if (L) Log.i(TAG,"onServerChange");
     	
-    	//TODO implement a JMRI service. For now assume we are always connecting to a MorBus service
+    	/* Save server IP info for after the service is started.*/
+    	mSrvrIP = srvrIP;
+
+    	// TODO Implement a JMRI service. Service type will be in the Bundle.
+    	// For now assume MorBus always
     	mRailSrvcConnection = new MBusService();
     	
-    	// Save server IP info
-    	mSrvrIP = srvrIP;
-    	
-    	// Start up MorBus service
-    	Intent mbusIntent = new Intent(this, com.olinsdepot.mbus_srvc.MbusService.class);
+    	/* Start up the service unless there's one running already */
 		if (!mSrvcBound) {
+	    	Intent mbusIntent = new Intent(this, com.olinsdepot.mbus_srvc.MbusService.class);
 			bindService(mbusIntent, mRailSrvcConnection, Context.BIND_AUTO_CREATE);
 		 }
 
@@ -272,13 +273,16 @@ public class MainActivity extends Activity implements
 	 * Roster change listener
 	 */
 	public void onRosterChange(int tID, Bundle dcdrState) {
-    	Log.d(TAG,"onRosterChange");
+    	if (L) Log.i(TAG,"onRosterChange");
         
         // If rail service not connected, do nothing.
         if (!mSrvcBound) return;
         
         // Create and send a message to the service, using a supported 'what' value
-        Message msg = Message.obtain(null, MbusSrvcCmd.DCC_ACQ_DCDR.toCode(), tID, Integer.parseInt(dcdrState.getString("DCDR_ADR")));
+        Message msg = Message.obtain();
+        msg.what = MbusSrvcCmd.DCC_ACQ_DCDR.toCode(); 
+        msg.arg1 = tID;
+        msg.arg2 = Integer.parseInt(dcdrState.getString("DCDR_ADR"));
         try {
             mClientToSrvcMsgr.send(msg);
         } catch (RemoteException e) {
@@ -316,30 +320,29 @@ public class MainActivity extends Activity implements
      */
     private class MBusService implements ServiceConnection {
     	
-    	// Called when service connects.
+    	/* Called when service connects. */
     	public void onServiceConnected(ComponentName className, IBinder service) {
-    		Log.d(TAG, "onServiceConnected - " + className);
+    		if(L) Log.i(TAG, "onServiceConnected - " + className);
     		
-    		// Register the MorBus service's Client message handler.
+    		/* Register the service's Client message handler. */
     		mClientToSrvcMsgr = new Messenger(service);
     		mSrvcBound = true;
     		
-    		// Send the service the connect message and info
-    		// 	what = CONNECT
-    		// 	arg1 = arg2 = 0
-    		// 	obj = Servers IP information
-    		// 	replyTo = Clients service message handler
-    		Message msg = Message.obtain(null, MbusSrvcCmd.SRVR_CNCT.toCode(), 0, 0);
+    		/* Send the service the connect command. Include saved server info
+    		 * and the handler for messages from the service.
+    		 */
+    		Message msg = Message.obtain();
+    		msg.what = MbusSrvcCmd.SRVR_CNCT.toCode();
     		msg.obj = mSrvrIP;
-    		msg.replyTo  = mSrvcToClientMsgr;
+    		msg.replyTo  = mClientFmSrvcMsgr;
             try {
-                mClientToSrvcMsgr.send(msg);
+               mClientToSrvcMsgr.send(msg);
             } catch (RemoteException e) {
-                e.printStackTrace();
+               e.printStackTrace();
             }
     	}
     	
-    	// Called when service disconnects unexpectedly.
+    	/* Called when service disconnects unexpectedly. */
     	public void onServiceDisconnected(ComponentName className) {
     		Log.d(TAG, "onServiceDisconnected - " + className);
     		mClientToSrvcMsgr = null;
@@ -347,17 +350,46 @@ public class MainActivity extends Activity implements
     	}
     };
     
+    
 	/**
 	 * Handler for messages from MBus service to Client. Receives events from
 	 * MBus service to Main thread to be parsed for display on the GUI.
 	 * 
 	 * @param msg - Message containing an event for Mbus service to process.
 	 */
-	static class SrvcToClientHandler extends Handler {
+	class SrvcMsgHandler extends Handler {
+		
 		@Override
 		public void handleMessage(Message msg) {
 			if (L) Log.i("MsgToClient", "Event Received = " + msg.what);
 			//TODO Handle server event.
+			
+			switch (MbusSrvcEvt.fromCode(msg.what)) {
+			
+			case SRVR_CNCTD:
+				/* Announce service startup */
+				Toast.makeText(getApplicationContext(), "Mbus Service Started", Toast.LENGTH_SHORT).show();
+				break;
+				
+			case SRVR_DSCNCTD:
+				break;
+				
+			case SRVR_PWR_IS:
+				break;
+				
+			case DCC_DCDR_ACQD:
+				break;
+				
+			case DCC_DCDR_RLSD:
+				break;
+
+			default:
+				super.handleMessage(msg);
+
+			}
+			
+			/* Message dispatched */
+//			msg.recycle();
 		}
 	}
 

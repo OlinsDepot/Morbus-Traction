@@ -83,42 +83,57 @@ public class CommsThread extends Thread {
 	private final OutputStream outputStream;
 	
 	/*
-	 * Message thread to decompose commands from the MorBus service to EmCAN commands to send
-	 * to the remote server. The service posts commands on the CommsSendHandler message queue.
+	 * Thread to handle commands from the Morbus Service. It receives
+	 * messages from the MorBus service and sends packets to the remote server
+	 * via the LAN.
 	 */
-	private static HandlerThread mCommsSendThread;
-	private static Looper mCommsSendLooper;
-	private static Handler mCommsSendHandler;
+	private HandlerThread mCommsSendThread;
+	private Looper mCommsSendLooper;
+	private Handler mCommsSendHandler;
+	private Messenger mCommsFmSrvcMsgr;
 
 	/* 
 	 * Keep alive thread
 	 */
-	static final int UPDATE_INTERVAL = 50000;
+	private static final int UPDATE_INTERVAL = 50000;
 	private Timer keepLiveTimer = new Timer();
 
 	/*
 	 *  Server state shared with the send and receive threads
 	 */
-	private enum SrvStates {
-		INIT,	// Not connected to server yet
-		READY,	// Connected, accepting commands
-		BUSY	// Connected, waiting for a command to complete
+	private static enum SrvStates {
+		INIT,	/* Not connected to server yet */
+		READY,	/* Connected, accepting commands. */
+		BUSY,	/* Connected, waiting for a command to complete. */
+		STOP	/* In process of shutting down. */
 	}
 	
-	/*
+	/**
 	 * Synchronize the server state between the transmit and receive threads.
 	 */
 	private  class SrvrState {
 		
 		private SrvStates myState;
 		
+		/* Constructor */
+		public SrvrState () {
+			myState = SrvStates.INIT;
+		}
+		
+		/* Return current Comms state. */
 		SrvStates get() {
 			return myState;
 		}
 		
+		/* Set current Comms state. */
 		SrvStates set(SrvStates state) {
 			myState = state;
 			return myState;
+		}
+		
+		/* Test current Comms state. */
+		boolean is(SrvStates test) {
+			return (test == myState);
 		}
 	}
 	SrvrState mSrvrState = new SrvrState();
@@ -285,17 +300,17 @@ public class CommsThread extends Thread {
 	 * @param sock - socket of target server.
 	 */
 	public CommsThread(Socket sock) {
+		if (L) Log.i(TAG,"Starting Comms Receive Thread");
 		
-		// Init server state
+		/* Init Comms thread state */
+		this.setName("SrvrMsgRcv");
 		mSrvrState.set(SrvStates.INIT);
 
 		mSocket = sock;
 		InputStream tmpIn = null;
 		OutputStream tmpOut = null;
 
-		this.setName("SrvrMsgRcv");
-		
-		// create input and output stream objects to read and write socket.
+		/* create input and output stream objects to read and write socket. */
 		try {
 			tmpIn = mSocket.getInputStream();
 			tmpOut = mSocket.getOutputStream();
@@ -306,36 +321,37 @@ public class CommsThread extends Thread {
 		inputStream = tmpIn;
 		outputStream = tmpOut;
 		
-		// Start the thread to send to the server
+		/* Start the thread to handle messages from MbusService and send to the server */
 		mCommsSendThread = new HandlerThread("SrvrMsgSnd", Process.THREAD_PRIORITY_BACKGROUND);
 		mCommsSendThread.start();
 		mCommsSendLooper = mCommsSendThread.getLooper();
 		mCommsSendHandler = new CommsSendHandler(mCommsSendLooper);
+		mCommsFmSrvcMsgr = new Messenger(mCommsSendHandler);
 
-		// Send "START" event to Morbus service with the Comm thread's message handler.
-		Message msg = MbusService.mCommsToSrvcHandler.obtainMessage(CommsEvt.START.ordinal(), 0, 0);
-		msg.replyTo  = new Messenger(mCommsSendHandler);
-        MbusService.mCommsToSrvcHandler.sendMessage(msg);
+
+		/* Send "START" event to Morbus service with the Comm thread's message handler. */
+		Message msg = MbusService.mSrvcFmCommsHandler.obtainMessage();
+		msg.what = CommsEvt.START.toCode();
+		msg.replyTo  = mCommsFmSrvcMsgr;
+        MbusService.mSrvcFmCommsHandler.sendMessage(msg);
 	}
 	
 
 	/**
-	 * Comms Receive Thread: Parses packet from server and generates an
-	 * event to send to the client.
+	 * Comms Receive Thread: Parses packet from server and generates
+	 * events to the Morbus Service.
 	 */
 	public void run() {
 		String TAG = "CommsRcv";
-		
-
 		final byte[] PROT_NAME = {'E','m','C','a','n',':','M','o','r','B','u','s'};
 		int protVersion = 0;
 
-		byte rspCode = 0;					    // read expected response code.
-		byte[] rcvBuf = new byte[1024];		// buffer store for the stream
-		int bytes = 0;		                // number of bytes returned from read
+		byte rspCode = 0;					/* Byte read from server. */
+		byte[] rcvBuf = new byte[1024];		/* buffer store for the stream. */
+		int bytes = 0;		                /* number of bytes returned from read. */
 		
 		while(true) {
-			//Make a blocking call to read response code from input stream.
+			/* Make a blocking call to read response code from input stream. */
 			try {
 				rspCode = (byte)inputStream.read();				
 			}
@@ -344,31 +360,32 @@ public class CommsThread extends Thread {
 				//TODO Send message to service that read on socket failed.
 			}			
 
-			// Dispatch received response code
+			/* Dispatch received server response. */
 			switch (EmCanRsp.fromCode(rspCode)) {
 			
 			case EOF:
+				/* Indicates attempt to read a closed socket. */
 				if (L) Log.i(TAG, "Reached EOF");
 				break;
 			
 			case NOP:
+				/* We ignore NOP except to log it if logging enabled. */
 				if (L) Log.i(TAG, "Received NOP");
 				break;
 			
 			case PONG:
+				/* If server was BUSY, receiving PONG indicates it's now READY. */
 				if (L) Log.i(TAG, "Received PONG");
-				// If server was BUSY, receiving PONG indicates it's now READY
-				if (mSrvrState.get() == SrvStates.BUSY) {
+				if (mSrvrState.equals(SrvStates.BUSY)) {
 					mSrvrState.set(SrvStates.READY);
 				}
 				break;
 			
 			case ID:
+				/* If state is INIT, ID says server connected. Otherwise, ignored. */
 				if (L) Log.i(TAG, "Received ID");
-				// Process this response if the server is not already connected, else - ignore it.
-				if (mSrvrState.get() == SrvStates.INIT) {
-					
-					//Read rest of the ID response...
+				if (mSrvrState.is(SrvStates.INIT)) {
+					/*Read rest of the ID response... */
 					for (bytes = 0; bytes < 1024; bytes++) {
 						try {
 							rcvBuf[bytes] = (byte)inputStream.read();
@@ -378,28 +395,31 @@ public class CommsThread extends Thread {
 						if (rcvBuf[bytes] == 0) break;
 					}
 					
-					//  ...and verify isequal EmCan:Morbus
+					/*  ...and verify isequal EmCan:Morbus */
 					byte[] rcvdId = Arrays.copyOf(rcvBuf,bytes);
 					if (Arrays.equals(rcvdId, PROT_NAME)) {
 							
-						//Read the protocol version.
+						/* Read the protocol version. */
 						try {
 							protVersion = inputStream.read();
 						} catch (IOException e) {
 							Log.d(TAG, e.getLocalizedMessage());
 						}
 	
-						// Send "Connect" event to Morbus service. Attach the server's message handler.
-						Message msg = MbusService.mCommsToSrvcHandler.obtainMessage(CommsEvt.CONNECT.ordinal());
-						msg.arg1 = 0; //Event is success
-						msg.arg2 = protVersion; // Report protocol version.
-		                MbusService.mCommsToSrvcHandler.sendMessage(msg);
+						/* Send "Connect" event to Morbus service. Attach the server's message handler. */
+						Message msg = MbusService.mSrvcFmCommsHandler.obtainMessage();
+						msg.what = CommsEvt.CONNECT.toCode();
+						msg.arg1 = protVersion; // Report protocol version.
+		                MbusService.mSrvcFmCommsHandler.sendMessage(msg);
 		                
-		                // Update server state to "Connected, ready for commands"
-			                mSrvrState.set(SrvStates.READY);
+		                /* Update server state to "Connected, ready for commands" */
+			            mSrvrState.set(SrvStates.READY);
 
 		                //Start a thread to send keep alive commands every 50 seconds
 						KeepAliveThread();
+					} else {
+						/* ID returned did not match. */
+						//TODO Respond with a Stop and shutdown.
 					}
 				}
 				break;
@@ -444,14 +464,15 @@ public class CommsThread extends Thread {
 				Log.d(TAG,"Unknown EMCan response");
 				break;
 				
-			}	// end switch	
-		}	// end while
+			}	/* end switch */
+			
+			//TODO If we get to here with a state of STOP end the thread.
+		}	/* end while */
 	}
 
 	/**
 	 *  Comms Send Thread: Parses command from service and generates a
 	 *  packet to send to the server.
-	 *  
 	 *  @param msg - Message from Main containing an MBus event.
 	 */
 	private final class CommsSendHandler extends Handler {
@@ -459,41 +480,28 @@ public class CommsThread extends Thread {
 		private ByteBuffer sndBuf;
 		private byte[] datBuf;
 		
-		// Constructor
+		/* Constructor */
 		public CommsSendHandler(Looper looper) {
 			super(looper);
 		}
 		
-		// Message handler
+		/* Message handler */
 		@Override
 		public void handleMessage(Message msg) {
 			if (L) Log.i("CommsSendHandler", "Message type " + msg.what);
 			
-			/*Spin waiting for server state to be READY.
-			while (mSrvrState.get() != SrvStates.READY) {
-				try {
-					mSrvrState.wait();
-				} catch (InterruptedException e) {
-					Log.d(TAG, e.getLocalizedMessage());
-				}			
-
-			}
-			*/
-			
-			// Dispatch this send command
+			/* Dispatch this send command */
 			switch (CommsCmd.fromCode(msg.what)) {
 			
-			/* Send the Byte Stream Protocol opcode byte passed in ARG1. */
 			case SND_STREAM:
+				/* Send the Byte Stream Protocol opcode byte passed in ARG1. */
 				sndBuf = ByteBuffer.allocate(1);
 				sndBuf.put((byte)msg.arg1);
 				write(sndBuf.array());
 				break;
 
-			/* Send a broadcast extended EmCAN frame with ARG1 = opcode, OBJ = data. */
 			case SND_BCST:
-				
-				/* Get the data & create a send buffer, based on data length. */
+				/* Send a broadcast extended EmCAN frame with ARG1 = opcode, OBJ = data. */
 				datBuf = (byte[]) msg.obj;
 				// TODO add check on length of datBuf.
 				sndBuf = ByteBuffer.allocate(6 + datBuf.length);
@@ -519,8 +527,11 @@ public class CommsThread extends Thread {
 				
 			default:
 				Log.d("CommsSendHandler", "Unknown MBus event type " + msg.what);
-				super.handleMessage(msg);
-			}
+				break;
+			}  /* switch(CommsCmd) */
+			
+			/* Dispatched this message. */
+//			msg.recycle();
 		}
 	}
 
@@ -533,6 +544,17 @@ public class CommsThread extends Thread {
 	 */
 	private void write(byte[] bytes)
 	{
+		/*Spin waiting for server state to be READY.
+		while (mSrvrState.get() != SrvStates.READY) {
+			try {
+				mSrvrState.wait();
+			} catch (InterruptedException e) {
+				Log.d(TAG, e.getLocalizedMessage());
+			}			
+
+		}
+		*/
+
 		try {
 			outputStream.write(bytes);
 		}
@@ -574,18 +596,16 @@ public class CommsThread extends Thread {
 	}
 
 	/**
-	 * Keep Alive Thread. Posts a keep-alive message to the send queue every 50 seconds.
-	 *
+	 * Keep Alive Thread. Sends a keep-alive frame to the server every 50 seconds.
 	 */
 	private void KeepAliveThread () {
 		keepLiveTimer.scheduleAtFixedRate(new TimerTask() {
 			public void run() {
-				Log.d(TAG, "KeepAliveTask");
 				if (L) Log.i("CommsSendHandler", "Sending Keep_alive");
-				
-				byte[] sndBuf = new byte[1];
-				sndBuf[0] = EmCanCmd.KEEPALIVE.toCode();
-				write(sndBuf);
+				Message msg = mCommsSendHandler.obtainMessage();
+				msg.what = CommsCmd.SND_STREAM.toCode();
+				msg.arg1 = EmCanCmd.KEEPALIVE.toCode();
+		        mCommsSendHandler.sendMessage(msg);
 			}
 		}, 0, UPDATE_INTERVAL);
 	}

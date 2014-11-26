@@ -22,6 +22,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 
 import com.olinsdepot.mbus_srvc.CommsThread.*;
+import com.olinsdepot.od_traction.MainActivity.*;
 
 
 /**
@@ -108,7 +109,7 @@ public class MbusService extends Service {
 			this.strop = op;
 		}
 		
-		/* Returns the code for this Mbus broadcast operation. */
+		/* Returns the code for this Mbus stream command. */
 		public int toCode() {
 			return this.strop;
 		}
@@ -128,7 +129,7 @@ public class MbusService extends Service {
 			this.strrsp = rsp;
 		}
 		
-		/* Returns the code for this Mbus broadcast operation. */
+		/* Returns the code for this Mbus stream response. */
 		public int toCode() {
 			return this.strrsp;
 		}
@@ -178,23 +179,23 @@ public class MbusService extends Service {
 
 
 	/*
-	 * Thread to handle the upward interface to GUI client. It receives commands from the GUI
-	 * on the ClientToSrvc messenger queue and sends responses to the SrvcToClient message
-	 * handler in the GUI.
+	 * Thread to handle the upward interface to Main thread. It receives commands
+	 * on the SrvcFmClient messenger queue and sends responses to the SrvcToClient
+	 * message handler in the Main thread.
 	 */
-	private HandlerThread mClientToSrvcThread;
-	private Looper mClientToSrvcLooper;
-	private static Handler mClientToSrvcHandler;
+	private HandlerThread mClientMsgHandlerThread;
+	private Looper mClientMsgHandlerLooper;
+	private Handler mClientMsgHandler;
+	private static Messenger mSrvcFmClientMsgr;
 	private static Messenger mSrvcToClientMsgr;
 	
 	/* 
-	 * Thread to handle the downward interface to the EmCAN bus driver. GUI commands are
-	 * decomposed into EmCAN transactions and sent to the driver via the SrvcToComms message
-	 * queue. Responses from the EmCAN driver are received on the CommsToSrvc message queue.
+	 * Thread to handle the downward interface to the EmCAN Comms. Responses from
+	 * the Comms thread are received on the CommsToSrvc message queue. EmCAN transactions
+	 * are sent to the Comms thread via the SrvcToComms messenger queue. 
 	 */
-	private Socket MbusSrvSocket;
 	private CommsThread mCommsThread;
-	static Handler mCommsToSrvcHandler = new CommsToSrvcHandler();
+	protected static Handler mSrvcFmCommsHandler = new CommsMsgHandler();
 	private static Messenger mSrvcToCommsMsgr;
 
 	
@@ -212,11 +213,12 @@ public class MbusService extends Service {
 	@Override
 	public void onCreate() {
 		if (L) Log.i(TAG, "Create MBus Service");
-		// Create thread to dispatch incoming messages from Client side interface.
-		mClientToSrvcThread = new HandlerThread("MBusSrvcMgr", Process.THREAD_PRIORITY_BACKGROUND);
-		mClientToSrvcThread.start();
-		mClientToSrvcLooper = mClientToSrvcThread.getLooper();
-		mClientToSrvcHandler = new ClientToSrvcHandler(mClientToSrvcLooper);
+		/* Create thread to dispatch incoming messages from Client side interface. */
+		mClientMsgHandlerThread = new HandlerThread("MBusSrvcMgr", Process.THREAD_PRIORITY_BACKGROUND);
+		mClientMsgHandlerThread.start();
+		mClientMsgHandlerLooper = mClientMsgHandlerThread.getLooper();
+		mClientMsgHandler = new ClientMsgHandler(mClientMsgHandlerLooper);
+		mSrvcFmClientMsgr = new Messenger(mClientMsgHandler);
 		
 	}
 	
@@ -228,8 +230,8 @@ public class MbusService extends Service {
 	public IBinder onBind(Intent intent) {
 		if (L) Log.i(TAG, "Start Mbus Service");
 		
-		// Pass the service's Client message handler back.
-		return new Messenger(mClientToSrvcHandler).getBinder();
+		/* Pass this service's Client message handler back. */
+		return mSrvcFmClientMsgr.getBinder();
 	}
 	
 	
@@ -239,17 +241,17 @@ public class MbusService extends Service {
 	@Override
 	public void onDestroy() {
 		if (L) Log.i(TAG, "Mbus Service Stopping");
-		Message msg = mClientToSrvcHandler.obtainMessage();
+		Message msg = mClientMsgHandler.obtainMessage();
 		msg.what = MbusSrvcEvt.SRVR_DSCNCTD.toCode();
-		mClientToSrvcHandler.sendMessage(msg);
+		mClientMsgHandler.sendMessage(msg);
 
 		super.onDestroy();
 	}
 
 	
-	//
-	// Handlers
-	//
+	/*
+	 * Handlers
+	 */
 	
 	/**
 	 *  Mbus Client Message Handler: Coordinates startup and shutdown of Service components.
@@ -258,9 +260,11 @@ public class MbusService extends Service {
 	 *  
 	 *  @param msg - Message containing request type and ip address of server.
 	 */
-	private final class ClientToSrvcHandler extends Handler {
+	private final class ClientMsgHandler extends Handler {
+		private final String TAG = this.getClass().getSimpleName();
+		private static final boolean L = true;
 	
-		public ClientToSrvcHandler(Looper looper) {
+		public ClientMsgHandler(Looper looper) {
 			super(looper);
 		}
 		
@@ -285,15 +289,15 @@ public class MbusService extends Service {
 				String mAddr = mSrvrIP.getString("IP_ADR");
 				int mPort = Integer.parseInt(mSrvrIP.getString("IP_PORT"));
 				
+				/* Start the Comms thread on the socket. */
 				try {
-					MbusSrvSocket = new Socket(InetAddress.getByName(mAddr), mPort);
-					
-					// Start the Comms thread on the socket.
+					Socket MbusSrvSocket = new Socket(InetAddress.getByName(mAddr), mPort);
 					mCommsThread = new CommsThread(MbusSrvSocket);
 					mCommsThread.start();				
 				}
 				catch (UnknownHostException e) {
 					Log.d(TAG, e.getLocalizedMessage());
+					//TODO notify user and Main that socket open failed.
 				}
 				catch (IOException e) {
 					Log.d(TAG, e.getLocalizedMessage());
@@ -302,17 +306,14 @@ public class MbusService extends Service {
 				/*Create array to hold DCC encoders registered to each throttle. (4 max); */
 				regDecoders = new DCCencoder[4];
 
-				/* Announce service startup */
-				Toast.makeText(getApplicationContext(), "Mbus Service Started", Toast.LENGTH_SHORT).show();
 				break;
 			
 			/* Disconnect the server and shut down the service. */
 			case SRVR_DSCNCT:
-				//Shut down service
 				//TODO Close socket and cancel related tasks, then shutdown the service.
-				if (L) Log.i(TAG,"Stop comms thread");
+				if (L) Log.i(TAG,"Disconnect command");
 
-				Toast.makeText(getApplicationContext(), "Mbus Server Shutdown", Toast.LENGTH_SHORT).show();
+				Toast.makeText(getApplicationContext(), "Mbus Server Shutdown Requested", Toast.LENGTH_SHORT).show();
 				break;
 			
 			/* Turn layout power on. */
@@ -379,12 +380,13 @@ public class MbusService extends Service {
 			 * */
 			case DCC_ACQ_DCDR:
 				regDecoders[msg.arg1] = new DCCencoder((Bundle)msg.obj);
-				
+/*				
 	    		try {
 	    			mSrvcToClientMsgr.send(Message.obtain(null, MbusSrvcEvt.DCC_DCDR_ACQD.toCode(), msg.arg1));
 	    		} catch (RemoteException e) {
 	    			e.printStackTrace();
 	    		}
+*/
 				break;
 				
 			/*
@@ -395,12 +397,13 @@ public class MbusService extends Service {
 				regDecoders[msg.arg1] =  null;
 				
 				//TODO Check settings to see if we need to send a STOP message to the decoder before release.
-				
+/*				
 	    		try {
 	    			mSrvcToClientMsgr.send(Message.obtain(null, MbusSrvcEvt.DCC_DCDR_RLSD.toCode(), msg.arg1));
 	    		} catch (RemoteException e) {
 	    			e.printStackTrace();
 	    		}
+*/
 				break;
 			
 			/* Send a reset to the decoder assigned to the throttle specified by ARG1. */
@@ -466,7 +469,11 @@ public class MbusService extends Service {
 			/* Unknown command in message */
 			default:
 				Log.d("MsgFromClient", "Unknown command type");
-				}
+				
+			} /* switch(mbusSrvcCmd) */
+			
+			/* Dispatched this message. */
+//			msg.recycle();
 		}
 	}
 
@@ -477,11 +484,14 @@ public class MbusService extends Service {
 	 * 
 	 * @param msg - Message containing byte count and byte data sent from server.
 	 */
-	static class CommsToSrvcHandler extends Handler {
+	static class CommsMsgHandler extends Handler {
+		private final String TAG = this.getClass().getSimpleName();
+		private static final boolean L = true;
+
 		@Override
 		public void handleMessage(Message msg)
 		{
-			
+			if(L) Log.i(TAG, "Msg from Comms = " + msg.what);
 			Message mClientMsg;
 			
 			/* Dispatch event received from CommsThread. */
@@ -504,27 +514,29 @@ public class MbusService extends Service {
 			case CONNECT:
 				
 				// TODO CommsThread will send remaining string from ID. Verify == MorBus.
-				
 				mClientMsg = Message.obtain();
 				mClientMsg.what = MbusSrvcEvt.SRVR_CNCTD.toCode();
-	    		try {
+				try {
 	    			mSrvcToClientMsgr.send(mClientMsg);
 	    		} catch (RemoteException e) {
 	    			e.printStackTrace();
 	    		}
-
 				break;
 				
-			// All other events
+			/* All other events. */
     		default:
-				//Unknown event in message
+				/*Unknown event in message */
 				Log.d("CommsToSrvcHandler", "Unknown event type");
+				super.handleMessage(msg);
     			break;
     			
-			}  //switch (CommsEvt)
+			}  /*switch (CommsEvt) */
+			
+			/* Dispatched this message. */
+//			msg.recycle();
 
-		}  //handleMessage(msg)
+		}  /* handleMessage(msg) */
 
-	};  //CommsToSrvcHandler
+	};  /* CommsToSrvcHandler */
 
 }
