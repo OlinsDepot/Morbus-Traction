@@ -529,9 +529,6 @@ public class CommsThread extends Thread {
 				Log.d("CommsSendHandler", "Unknown MBus event type " + msg.what);
 				break;
 			}  /* switch(CommsCmd) */
-			
-			/* Dispatched this message. */
-//			msg.recycle();
 		}
 	}
 

@@ -144,20 +144,23 @@ public class DCCencoder {
 		case 0:
 			this.dcdrAdr = new byte[1];
 			this.dcdrAdr[0] = (byte)(theAddr & 0x7F);
+			break;
 		/* Address type 1 - Mobile decoder, long address */
 		case 1:
 			this.dcdrAdr = new byte[2];
 			this.dcdrAdr[0] = (byte)(ADR_TYP.MF_DCDR_LONG.toCode() | ((theAddr >> 8) & 0x3F));
 			this.dcdrAdr[1] = (byte)(theAddr & 0xFF);
+			break;
 		/* Address type 2 - Accessory decoder, 9 and 11 bit address */
 		case 2:
 			this.dcdrAdr = new byte[2];
 			this.dcdrAdr[0] = (byte)(ADR_TYP.ACC_DCDR.toCode() | ((theAddr >> 8) & 0x3F));
 			this.dcdrAdr[1] = (byte)(theAddr & 0x1F);
+			break;
 		/* Unexpected decoder address type */
 		default:
-			Log.d("DCCencoder", "Unknown decoder type" + theDcdrTyp);
-			
+			Log.d("DCCencoder", "Unknown decoder type = " + theDcdrTyp);
+			break;
 		}
 		
 		/* Save speed step format */
@@ -205,17 +208,17 @@ public class DCCencoder {
 		/* Set direction and scale speed for this decoders speed step format */
 		if (speed < 0) {
 			direction = 0;
-			throttleStep = -speed * (this.dcdrNumSteps/126);
+			throttleStep = (-speed * this.dcdrNumSteps)/126;
 		} else {
 			direction = 1;
-			throttleStep = speed *(this.dcdrNumSteps/126);
+			throttleStep = (speed * this.dcdrNumSteps)/126;
 		}
 
 		/* Format the speed step command as required by this decoder. */
 		switch (this.dcdrNumSteps) {
 		/* 14 step format */
 		case 14:
-			/* Setup buffer for a 1 byte instruction */
+			/* Setup buffer for address + command + 1 byte instruction */
 			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 2);
 			
 			/* If Step is not 0 (STOP), command repeats forever and step is adjusted to skip Stop commands. */
@@ -239,8 +242,8 @@ public class DCCencoder {
 
 		/* 28 step format */
 		case 28:
-			/* Setup buffer for a 1 byte instruction */
-			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length +1);
+			/* Setup buffer for address + command + 1 byte instruction */
+			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 2);
 			
 			/* If Step is not 0 (STOP), command repeats forever and step is adjusted to skip Stop commands. */
 			/* If it is Stop, it is repeated for the standard number of times. */
@@ -264,7 +267,7 @@ public class DCCencoder {
 		
 		/* 126 step format */
 		case 126:
-			/* Setup buffer for a 2 byte instruction */
+			/* Setup buffer for address + command + 2 byte instruction */
 			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length +3);
 			
 			/* If Step is not 0 (STOP), command repeats forever and step is adjusted to skip Stop commands. */

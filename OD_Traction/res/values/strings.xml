@@ -22,10 +22,13 @@
     
     <string name="roster_view">Roster View</string>
     <string name="dcdr_name">Road ID</string>
+    <string name="dcdr_addr_typ">Type</string>
     <string name="dcdr_addr">Decoder Adr</string>
+    <string name="dcdr_steps">Steps</string>
     <string name="dcdr_btn_txt">Select Decoder</string>
     <string name="dcdr_btn_txt_acquire">ACQ</string>
     <string name="dcdr_btn_txt_release">RLS</string>
+    
 
     <string name="cab_view">Cab View</string>
     <string name="BTNSTOP">STOP</string>

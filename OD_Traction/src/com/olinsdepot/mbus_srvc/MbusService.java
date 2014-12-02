@@ -379,6 +379,8 @@ public class MbusService extends Service {
 			 * Notify main that decoder was acquired for throttle in ARG1.
 			 * */
 			case DCC_ACQ_DCDR:
+				
+				//TODO Check settings to see if we need to send a RESET message to the decoder before acquisition.
 				regDecoders[msg.arg1] = new DCCencoder((Bundle)msg.obj);
 /*				
 	    		try {
@@ -462,20 +464,15 @@ public class MbusService extends Service {
 	    		} catch (RemoteException e) {
 	    			e.printStackTrace();
 	    		}
-				
-
 				break;
 				
 			/* Unknown command in message */
 			default:
-				Log.d("MsgFromClient", "Unknown command type");
-				
-			} /* switch(mbusSrvcCmd) */
-			
-			/* Dispatched this message. */
-//			msg.recycle();
-		}
-	}
+				Log.d("MsgFromClient", "Unknown command type = " + msg.what);
+				break;				
+			} /* switch(mbusSrvcCmd) */			
+		} /* handler method */
+	} /* handler class */
 
 	
 	/**

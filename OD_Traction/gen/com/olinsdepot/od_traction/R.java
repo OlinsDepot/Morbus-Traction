@@ -44,21 +44,25 @@ public final class R {
         public static final int seek_thumb_selected=0x7f020007;
     }
     public static final class id {
-        public static final int BTNFWD=0x7f080014;
-        public static final int BTNREV=0x7f080013;
-        public static final int BTNSTOP=0x7f080012;
+        public static final int BTNFWD=0x7f080018;
+        public static final int BTNREV=0x7f080017;
+        public static final int BTNSTOP=0x7f080016;
         public static final int LEFT_THROTTLE_FRAME=0x7f080003;
         public static final int RIGHT_THROTTLE_FRAME=0x7f080004;
-        public static final int Throttle=0x7f080011;
-        public static final int ThrottleFragment=0x7f080010;
-        public static final int action_example=0x7f080016;
-        public static final int action_settings=0x7f080015;
-        public static final int dcdrAdr1=0x7f08000b;
-        public static final int dcdrAdr2=0x7f08000e;
+        public static final int Throttle=0x7f080015;
+        public static final int ThrottleFragment=0x7f080014;
+        public static final int action_example=0x7f08001a;
+        public static final int action_settings=0x7f080019;
+        public static final int dcdrAdr1=0x7f08000c;
+        public static final int dcdrAdr2=0x7f080011;
         public static final int dcdrName1=0x7f08000a;
-        public static final int dcdrName2=0x7f08000d;
-        public static final int dcdrSel1=0x7f08000c;
-        public static final int dcdrSel2=0x7f08000f;
+        public static final int dcdrName2=0x7f08000f;
+        public static final int dcdrSel1=0x7f08000e;
+        public static final int dcdrSel2=0x7f080013;
+        public static final int dcdrStep1=0x7f08000d;
+        public static final int dcdrStep2=0x7f080012;
+        public static final int dcdrTyp1=0x7f08000b;
+        public static final int dcdrTyp2=0x7f080010;
         public static final int drawer_layout=0x7f080000;
         public static final int hostName=0x7f080006;
         public static final int hostPort=0x7f080007;
@@ -82,19 +86,21 @@ public final class R {
         public static final int main=0x7f070001;
     }
     public static final class string {
-        public static final int BTNFWD=0x7f050017;
-        public static final int BTNREV=0x7f050018;
-        public static final int BTNSTOP=0x7f050016;
+        public static final int BTNFWD=0x7f050019;
+        public static final int BTNREV=0x7f05001a;
+        public static final int BTNSTOP=0x7f050018;
         public static final int action_about=0x7f050009;
         public static final int action_example=0x7f050007;
         public static final int action_settings=0x7f050008;
         public static final int app_name=0x7f050000;
-        public static final int cab_view=0x7f050015;
-        public static final int dcdr_addr=0x7f050011;
-        public static final int dcdr_btn_txt=0x7f050012;
-        public static final int dcdr_btn_txt_acquire=0x7f050013;
-        public static final int dcdr_btn_txt_release=0x7f050014;
+        public static final int cab_view=0x7f050017;
+        public static final int dcdr_addr=0x7f050012;
+        public static final int dcdr_addr_typ=0x7f050011;
+        public static final int dcdr_btn_txt=0x7f050014;
+        public static final int dcdr_btn_txt_acquire=0x7f050015;
+        public static final int dcdr_btn_txt_release=0x7f050016;
         public static final int dcdr_name=0x7f050010;
+        public static final int dcdr_steps=0x7f050013;
         public static final int frag_net_cnct_btn=0x7f05000e;
         public static final int frag_net_srvr_field=0x7f05000c;
         public static final int frag_net_srvr_name=0x7f05000b;

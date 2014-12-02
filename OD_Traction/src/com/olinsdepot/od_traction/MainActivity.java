@@ -270,25 +270,29 @@ public class MainActivity extends Activity implements
     }
 
 	/**
-	 * Roster change listener
+	 * Roster change listener. Tell service to acquire or release a DCC decoder.
 	 */
 	public void onRosterChange(int tID, Bundle dcdrState) {
     	if (L) Log.i(TAG,"onRosterChange");
         
-        // If rail service not connected, do nothing.
+        /* If rail service not connected, do nothing. */
         if (!mSrvcBound) return;
         
-        // Create and send a message to the service, using a supported 'what' value
+        /* Send message to the service to acquire or release the decoder passed in the bundle. */
         Message msg = Message.obtain();
-        msg.what = MbusSrvcCmd.DCC_ACQ_DCDR.toCode(); 
+        if (dcdrState.getBoolean("DCDR_CNCT")) {
+            msg.what = MbusSrvcCmd.DCC_ACQ_DCDR.toCode();
+        } else {
+            msg.what = MbusSrvcCmd.DCC_RLS_DCDR.toCode();
+        }
         msg.arg1 = tID;
-        msg.arg2 = Integer.parseInt(dcdrState.getString("DCDR_ADR"));
+        msg.obj = dcdrState;
         try {
             mClientToSrvcMsgr.send(msg);
         } catch (RemoteException e) {
             e.printStackTrace();
         }
-		
+//        msg.arg2 = Integer.parseInt(dcdrState.getString("DCDR_ADR"));
 	}
 
     /**
@@ -362,7 +366,6 @@ public class MainActivity extends Activity implements
 		@Override
 		public void handleMessage(Message msg) {
 			if (L) Log.i("MsgToClient", "Event Received = " + msg.what);
-			//TODO Handle server event.
 			
 			switch (MbusSrvcEvt.fromCode(msg.what)) {
 			
@@ -387,9 +390,6 @@ public class MainActivity extends Activity implements
 				super.handleMessage(msg);
 
 			}
-			
-			/* Message dispatched */
-//			msg.recycle();
 		}
 	}
 

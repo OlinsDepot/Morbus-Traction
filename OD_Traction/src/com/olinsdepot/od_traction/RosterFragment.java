@@ -13,7 +13,12 @@ import android.widget.EditText;
 import android.widget.ToggleButton;
 
 /**
- * The Roster fragment gets the DCC information from user to connect to the throttle.
+ * The Roster fragment gets the information from user to define a decoder.
+ * When "Acquire" button pressed, Calls onRosterChange in main with a bundle
+ * defining the target decoder to be passed on to the Morbus service which
+ * registers the decoder as connected to the throttle passed in Arg1. When
+ * the button is pressed again, a new message is sent to the service and
+ * the decoder is released. 
  */
 public class RosterFragment extends Fragment {
 	private final String TAG = getClass().getSimpleName();
@@ -34,24 +39,34 @@ public class RosterFragment extends Fragment {
 	MainActivity mActivity;
 	
 	 
-	// Links to fields in the user UI.
+	/* Links to fields in the user UI */
+	//TODO re-write this to use frames and handle 1 to 4 throttles.
 	private EditText mDcdrName1;
+	private EditText mDcdrTyp1;
     private EditText mDcdrAddr1;
+    private EditText mDcdrStep1;
+    private int mDcdrFkey1 = 0;
     private ToggleButton mDcdrSelBtn1;
     private EditText mDcdrName2;
+    private EditText mDcdrTyp2;
     private EditText mDcdrAddr2;
+    private EditText mDcdrStep2;
+    private int mDcdrFkey2 = 0;
     private ToggleButton mDcdrSelBtn2;
 
-	// Bundle to preserve and communicate UI status.
+	/* Bundle to preserve UI state. */
 	private static Bundle rosterState = null;
 	private static boolean btn1State = false;
 	private static boolean btn2State = false;
 	
-	// Fields in the status bundle
-	private static final String THTL = "THTL_ID";
-	private static final String NAME = "DCDR_NAME";
-	private static final String ADDR = "DCDR_ADR";
-	private static final String STATE = "DCDR_CNCT";
+	/* Fields in the status bundle */
+//	private static final String THTL =	"THTL_ID";
+	private static final String NAME =	"DCDR_NAME";
+	private static final String ADDR =	"DCDR_ADR";
+	private static final String STATE =	"DCDR_CNCT";
+	private static final String TYPE =	"ADR_TYP";
+	private static final String STEPS =	"SPD_STEPS";
+	private static final String FKEYS=	"KEY_STATES";
 
 	 /**
 	  * Null constructor for this fragment
@@ -109,11 +124,13 @@ public class RosterFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         if (L) Log.i(TAG, "onCreateView");
 
-        // Get the roster view and connect to the fields in it.
+        /* Get the roster view and connect to the fields in it. */
         View rosterFragView = inflater.inflate(R.layout.fragment_roster, container, false);
         
         mDcdrName1 = (EditText) rosterFragView.findViewById(R.id.dcdrName1);
+        mDcdrTyp1 = (EditText) rosterFragView.findViewById(R.id.dcdrTyp1);
         mDcdrAddr1 = (EditText) rosterFragView.findViewById(R.id.dcdrAdr1);
+        mDcdrStep1 = (EditText) rosterFragView.findViewById(R.id.dcdrStep1);
 		mDcdrSelBtn1 = (ToggleButton) rosterFragView.findViewById(R.id.dcdrSel1);
 
 		mDcdrSelBtn1.setOnCheckedChangeListener(
@@ -132,17 +149,22 @@ public class RosterFragment extends Fragment {
 				     
 				     if (isChecked) {
 				    	 btn1State = true;
-				    	 dcdrState.putInt(THTL, 0);
+//				    	 dcdrState.putInt(THTL, 0);
 				    	 dcdrState.putBoolean(STATE, btn1State);
 				    	 dcdrState.putString(NAME, mDcdrName1.getText().toString());
-				    	 dcdrState.putString(ADDR, mDcdrAddr1.getText().toString());
+				    	 dcdrState.putInt(TYPE, Integer.parseInt(mDcdrTyp1.getText().toString()));
+				    	 dcdrState.putInt(ADDR, Integer.parseInt(mDcdrAddr1.getText().toString()));
+				    	 dcdrState.putInt(STEPS, Integer.parseInt(mDcdrStep1.getText().toString()));
+				    	 dcdrState.putInt(FKEYS, mDcdrFkey1);
 				     }
 				     else {
 				    	 btn1State = false;
-				    	 dcdrState.putInt(THTL, 0);
+//				    	 dcdrState.putInt(THTL, 0);
 				    	 dcdrState.putBoolean(STATE,  btn1State);
 				    	 dcdrState.putString(NAME, null);
-				    	 dcdrState.putString(ADDR, null);
+				    	 dcdrState.putInt(ADDR, 0);
+				    	 dcdrState.putInt(STEPS, 0);
+				    	 dcdrState.putInt(FKEYS, 0);
 				     }
 				     
 				     rosterListener.onRosterChange(0, dcdrState);
@@ -151,7 +173,9 @@ public class RosterFragment extends Fragment {
 		);
 
         mDcdrName2 = (EditText) rosterFragView.findViewById(R.id.dcdrName2);
+        mDcdrTyp2 = (EditText) rosterFragView.findViewById(R.id.dcdrTyp2);
 		mDcdrAddr2 = (EditText) rosterFragView.findViewById(R.id.dcdrAdr2);
+        mDcdrStep2 = (EditText) rosterFragView.findViewById(R.id.dcdrStep2);
 		mDcdrSelBtn2 = (ToggleButton) rosterFragView.findViewById(R.id.dcdrSel2);
 
 		mDcdrSelBtn2.setOnCheckedChangeListener(
@@ -170,17 +194,23 @@ public class RosterFragment extends Fragment {
 
 				     if (isChecked) {
 				    	 btn2State = true;
-				    	 dcdrState.putInt(THTL, 1);
+//				    	 dcdrState.putInt(THTL, 1);
 				    	 dcdrState.putBoolean(STATE, btn2State);
 				    	 dcdrState.putString(NAME, mDcdrName2.getText().toString());
-				    	 dcdrState.putString(ADDR, mDcdrAddr2.getText().toString());
+				    	 dcdrState.putInt(TYPE, Integer.parseInt(mDcdrTyp2.getText().toString()));
+				    	 dcdrState.putInt(ADDR, Integer.parseInt(mDcdrAddr2.getText().toString()));
+				    	 dcdrState.putInt(STEPS, Integer.parseInt(mDcdrStep2.getText().toString()));
+				    	 dcdrState.putInt(FKEYS, mDcdrFkey2);
 				     }
 				     else {
 				    	 btn2State = false;
-				    	 dcdrState.putInt(THTL, 1);
+//				    	 dcdrState.putInt(THTL, 1);
 				    	 dcdrState.putBoolean(STATE, btn2State);
 				    	 dcdrState.putString(NAME, null);
 				    	 dcdrState.putString(ADDR, null);
+				    	 dcdrState.putInt(ADDR, 0);
+				    	 dcdrState.putInt(STEPS, 0);
+				    	 dcdrState.putInt(FKEYS, 0);
 				     }
 
 				     rosterListener.onRosterChange(1, dcdrState);
@@ -257,12 +287,18 @@ public class RosterFragment extends Fragment {
     	final Bundle dcdr1 = new Bundle();
 		dcdr1.putBoolean(STATE, btn1State);
 		dcdr1.putString(NAME, mDcdrName1.getText().toString());
-		dcdr1.putString(ADDR, mDcdrAddr1.getText().toString());
+	   	dcdr1.putString(TYPE, mDcdrTyp1.getText().toString());
+	   	dcdr1.putString(ADDR, mDcdrAddr1.getText().toString());
+	   	dcdr1.putString(STEPS, mDcdrStep1.getText().toString());
+	   	dcdr1.putInt(FKEYS, mDcdrFkey1);
 
 		final Bundle dcdr2 = new Bundle();
 		dcdr2.putBoolean(STATE, btn2State);
 		dcdr2.putString(NAME, mDcdrName2.getText().toString());
+		dcdr2.putString(TYPE, mDcdrTyp2.getText().toString());
 		dcdr2.putString(ADDR, mDcdrAddr2.getText().toString());
+		dcdr2.putString(STEPS, mDcdrStep2.getText().toString());
+		dcdr2.putInt(FKEYS, mDcdrFkey2);
 		
 		toSave.putBundle("THTL1", dcdr1);
 		toSave.putBundle("THTL2", dcdr2);
@@ -279,13 +315,19 @@ public class RosterFragment extends Fragment {
 			btn1State = dcdr1.getBoolean(STATE);
 			mDcdrSelBtn1.setChecked(btn1State);
 			mDcdrName1.setText(dcdr1.getString(NAME));
+			mDcdrTyp1.setText(dcdr1.getString(TYPE));
 			mDcdrAddr1.setText(dcdr1.getString(ADDR));
+			mDcdrStep1.setText(dcdr1.getString(STEPS));
+			mDcdrFkey1 = dcdr1.getInt(FKEYS);
 
 			final Bundle dcdr2 = fromSave.getBundle("THTL2");
 			btn2State = dcdr2.getBoolean(STATE);
 			mDcdrSelBtn2.setChecked(btn2State);
 			mDcdrName2.setText(dcdr2.getString(NAME));
+			mDcdrTyp2.setText(dcdr2.getString(TYPE));
 			mDcdrAddr2.setText(dcdr2.getString(ADDR));
+			mDcdrStep2.setText(dcdr2.getString(STEPS));
+			mDcdrFkey2 = dcdr2.getInt(FKEYS);
 		}
     }
 
