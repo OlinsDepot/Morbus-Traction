@@ -23,9 +23,10 @@ public class ThrottleFragment extends Fragment {
 		/**
 		 * Called when UI detects a change in throttle setting.
 		 * @param tID
-		 * @param speed
+		 * @param tCmd TODO
+		 * @param arg
 		 */
-		public void onThrottleChange(int tID, int speed);
+		public void onThrottleChange(int tID, int tCmd, int arg);
 	}
 
 	private OnThrottleChangeListener tListener;
@@ -36,7 +37,7 @@ public class ThrottleFragment extends Fragment {
 	private static final String ARG_HAND = "HANDVIEW";
 
 	private int tID = 3;
-	private int tSet = 50;
+	private int tSet = 0;
 	private int tDir = 0;
 	private int speed = 0;
 
@@ -128,6 +129,18 @@ public class ThrottleFragment extends Fragment {
 			}
 		);
 
+		Button tFkeyButton = (Button) tFragView.findViewById(R.id.BTNFKEY0);
+		tFkeyButton.setOnClickListener(
+			new OnClickListener() {
+				@Override
+				public void onClick(final View v) {
+					//Pass tFragView through to the handler so that findViewById
+					//can be used to get a handle on the fragments own views.
+					toggleFkey(tFragView);
+				}
+			}
+		);
+
 		vbarThrottle = (VerticalSeekBar)tFragView.findViewById(R.id.Throttle);
 		vbarThrottle.setMax(126);
 		vbarThrottle.setProgress(tSet);
@@ -141,7 +154,7 @@ public class ThrottleFragment extends Fragment {
 					} else {
 						speed = tDir*tSet;
 					}
-					tListener.onThrottleChange(tID, speed);
+					tListener.onThrottleChange(tID, 0, speed);
 				}
 
 				@Override
@@ -224,7 +237,7 @@ public class ThrottleFragment extends Fragment {
 			tSet = 0;
 			speed = 0;
 			vbarThrottle.setProgress(tSet);
-			tListener.onThrottleChange(tID, speed);
+			tListener.onThrottleChange(tID, 0, speed);
 
 		}
 	}
@@ -234,6 +247,11 @@ public class ThrottleFragment extends Fragment {
 		if (tDir == 0) {
 			tDir = +1;
 		}
+	}
+
+	private void toggleFkey (View myView) {
+		//Toggle FKEY 0.
+			tListener.onThrottleChange(tID, 1, 0);
 	}
 
 }

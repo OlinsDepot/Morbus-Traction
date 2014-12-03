@@ -354,13 +354,13 @@ public class DCCencoder {
 	 * @param val  0= function off, not 0 = function on.
 	 * @return Byte string for function command for this decoder.
 	 */
-	protected byte[] DCCfunc (int funcKey, boolean onOff) {
+	protected byte[] DCCfunc (int funcKey) {
 
 		ByteBuffer dccCmd = null;
 
 		
 		/* Update function key state and get bit vector */
-		this.fkState.set(funcKey, onOff);
+		this.fkState.tog(funcKey);
 		
 		/* FL and F1 - F4 */
 		if (funcKey <= 4) {
@@ -368,7 +368,10 @@ public class DCCencoder {
 			/* Create a buffer for a one byte command and set the control byte. */
 			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 2);
 			dccCmd.put(REP_CNT);
-			
+
+			/* Put this decoder's address into the command. */
+			dccCmd.put(this.dcdrAdr);
+
 			/* Create the instruction byte from the instruction opcode, the fl state and F1 - F4 state. */
 			dccCmd.put((byte)(DCC_INS.F_GRP_1.toCode() | ((this.fkState.get(0)) << 4) | fkState.get(1, 4) ));
 			
@@ -380,6 +383,9 @@ public class DCCencoder {
 			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 2);
 			dccCmd.put(REP_CNT);
 
+			/* Put this decoder's address into the command. */
+			dccCmd.put(this.dcdrAdr);
+
 			/* create the instruction byte from the instruction opcode and the F5 to F8 state. */
 			dccCmd.put((byte)(DCC_INS.F_GRP_2.toCode() | this.fkState.get(5, 8) ));
 		}
@@ -389,6 +395,9 @@ public class DCCencoder {
 			/* Create a buffer for a one byte command and set the control byte. */
 			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 2);
 			dccCmd.put(REP_CNT);
+
+			/* Put this decoder's address into the command. */
+			dccCmd.put(this.dcdrAdr);
 
 			/* create the instruction byte from the instruction opcode, the group 2 flag and the F9 to F12 state. */
 			dccCmd.put((byte)(DCC_INS.F_GRP_2.toCode() | 0x10 | this.fkState.get(9, 12) ));				
@@ -400,6 +409,9 @@ public class DCCencoder {
 			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 3);
 			dccCmd.put(REP_CNT);
 			
+			/* Put this decoder's address into the command. */
+			dccCmd.put(this.dcdrAdr);
+
 			/* Create instruction byte from Feature Extension opcode and Function Control sub-opcode. */
 			dccCmd.put((byte)(DCC_INS.FTR_EXP.toCode() | FTR_EXP_INS.F_GRP_3.toCode()));
 			
@@ -413,6 +425,9 @@ public class DCCencoder {
 			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 3);
 			dccCmd.put(REP_CNT);
 			
+			/* Put this decoder's address into the command. */
+			dccCmd.put(this.dcdrAdr);
+
 			/* Create instruction byte from Feature Extension opcode and Function Control sub-opcode. */
 			dccCmd.put((byte)(DCC_INS.FTR_EXP.toCode() | FTR_EXP_INS.F_GRP_4.toCode()));
 			

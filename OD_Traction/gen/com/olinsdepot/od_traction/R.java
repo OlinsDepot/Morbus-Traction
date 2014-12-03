@@ -44,6 +44,7 @@ public final class R {
         public static final int seek_thumb_selected=0x7f020007;
     }
     public static final class id {
+        public static final int BTNFKEY0=0x7f080019;
         public static final int BTNFWD=0x7f080018;
         public static final int BTNREV=0x7f080017;
         public static final int BTNSTOP=0x7f080016;
@@ -51,8 +52,8 @@ public final class R {
         public static final int RIGHT_THROTTLE_FRAME=0x7f080004;
         public static final int Throttle=0x7f080015;
         public static final int ThrottleFragment=0x7f080014;
-        public static final int action_example=0x7f08001a;
-        public static final int action_settings=0x7f080019;
+        public static final int action_example=0x7f08001b;
+        public static final int action_settings=0x7f08001a;
         public static final int dcdrAdr1=0x7f08000c;
         public static final int dcdrAdr2=0x7f080011;
         public static final int dcdrName1=0x7f08000a;

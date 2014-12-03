@@ -103,4 +103,20 @@ public class DCCfunctionkeys {
 		return (this.fkeyState >> skey) & keyMask;
 	}
 
+	/**
+	 * Set specified function key state to specified value
+	 * @param fkey
+	 * @param fval
+	 */
+	public int tog(int fkey) {
+		int fval = this.get(fkey);
+		if (fval == 0) {
+			this.set(fkey);
+		} else {
+			this.clear(fkey);
+		}
+		
+		return fval;
+	}
+
 }

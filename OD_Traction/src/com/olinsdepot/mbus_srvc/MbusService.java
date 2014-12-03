@@ -457,7 +457,7 @@ public class MbusService extends Service {
 				mCommsMsg = Message.obtain();
 				mCommsMsg.what = CommsCmd.SND_BCST.toCode();
 				mCommsMsg.arg1 = MbusBcstOp.DCC.toCode();
-				mCommsMsg.obj = regDecoders[msg.arg1].DCCfunc(msg.arg2, (boolean)msg.obj);
+				mCommsMsg.obj = regDecoders[msg.arg1].DCCfunc(msg.arg2);
 
 				try {
 					mSrvcToCommsMsgr.send(mCommsMsg);

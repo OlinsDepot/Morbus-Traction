@@ -299,20 +299,29 @@ public class MainActivity extends Activity implements
 	 * Throttle change listener
 	 */
 	@Override
-	public void onThrottleChange(int tID, int speed) {
-        Toast.makeText(getApplicationContext(), "ID="+tID+" Speed="+speed, Toast.LENGTH_SHORT).show();
+	public void onThrottleChange(int tID, int tCmd, int arg) {
+        Toast.makeText(getApplicationContext(), "ID="+tID+" Speed="+arg, Toast.LENGTH_SHORT).show();
 
         // If no Morbus service connected, do nothing.
         if (!mSrvcBound) return;
-        
-        // Create and send a message to the service, using a supported 'what' value
-        Message msg = Message.obtain(null, MbusSrvcCmd.DCC_THTL_STEP.toCode(), tID, speed);
-        try {
-            mClientToSrvcMsgr.send(msg);
-        } catch (RemoteException e) {
-            e.printStackTrace();
+        if(tCmd == 0) {
+	        // Create and send a message to the service, using a supported 'what' value
+	        Message msg = Message.obtain(null, MbusSrvcCmd.DCC_THTL_STEP.toCode(), tID, arg);
+	        try {
+	            mClientToSrvcMsgr.send(msg);
+	        } catch (RemoteException e) {
+	            e.printStackTrace();
+	        }
+        } else if(tCmd == 1) {
+	        // Create and send a message to the service, using a supported 'what' value
+	        Message msg = Message.obtain(null, MbusSrvcCmd.DCC_FUNC_KEY.toCode(), tID, arg);
+	        try {
+	            mClientToSrvcMsgr.send(msg);
+	        } catch (RemoteException e) {
+	            e.printStackTrace();
+	        }
+        	
         }
-
 	}
     
     //
