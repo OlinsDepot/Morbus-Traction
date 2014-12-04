@@ -410,60 +410,67 @@ public class MbusService extends Service {
 			
 			/* Send a reset to the decoder assigned to the throttle specified by ARG1. */
 			case DCC_RST_DCDR:
-				mCommsMsg = Message.obtain();
-				mCommsMsg.what = CommsCmd.SND_BCST.toCode();
-				mCommsMsg.arg1 = MbusBcstOp.DCC.toCode();
-				mCommsMsg.obj = regDecoders[msg.arg1].DCCreset();
-
-				try {
-					mSrvcToCommsMsgr.send(mCommsMsg);
-	    		} catch (RemoteException e) {
-	    			e.printStackTrace();
-	    		}
-				
+				if(regDecoders[msg.arg1] != null) {
+					mCommsMsg = Message.obtain();
+					mCommsMsg.what = CommsCmd.SND_BCST.toCode();
+					mCommsMsg.arg1 = MbusBcstOp.DCC.toCode();
+					mCommsMsg.obj = regDecoders[msg.arg1].DCCreset();
+	
+					try {
+						mSrvcToCommsMsgr.send(mCommsMsg);
+		    		} catch (RemoteException e) {
+		    			e.printStackTrace();
+		    		}
+				}
 				break;
 				
 			/* Send throttle step in ARG2 to the decoder registered to the throttle in ARG1. */
 			case DCC_THTL_STEP:
-				mCommsMsg = Message.obtain();
-				mCommsMsg.what = CommsCmd.SND_BCST.toCode();
-				mCommsMsg.arg1 = MbusBcstOp.DCC.toCode();
-				mCommsMsg.obj = regDecoders[msg.arg1].DCCspeed(msg.arg2);
-
-				try {
-					mSrvcToCommsMsgr.send(mCommsMsg);
-	    		} catch (RemoteException e) {
-	    			e.printStackTrace();
-	    		}
+				if(regDecoders[msg.arg1] != null) {
+					mCommsMsg = Message.obtain();
+					mCommsMsg.what = CommsCmd.SND_BCST.toCode();
+					mCommsMsg.arg1 = MbusBcstOp.DCC.toCode();
+					mCommsMsg.obj = regDecoders[msg.arg1].DCCspeed(msg.arg2);
+	
+					try {
+						mSrvcToCommsMsgr.send(mCommsMsg);
+		    		} catch (RemoteException e) {
+		    			e.printStackTrace();
+		    		}
+				}
 				
 				break;
 
 			/* Send a hard stop command to the decoder registered to the throttle in Arg1. */
 			case DCC_HARD_STOP:
-				mCommsMsg = Message.obtain();
-				mCommsMsg.what = CommsCmd.SND_BCST.toCode();
-				mCommsMsg.arg1 = MbusBcstOp.DCC.toCode();
-				mCommsMsg.obj = regDecoders[msg.arg1].DCCestop();
-
-				try {
-					mSrvcToCommsMsgr.send(mCommsMsg);
-	    		} catch (RemoteException e) {
-	    			e.printStackTrace();
-	    		}
+				if(regDecoders[msg.arg1] != null) {
+					mCommsMsg = Message.obtain();
+					mCommsMsg.what = CommsCmd.SND_BCST.toCode();
+					mCommsMsg.arg1 = MbusBcstOp.DCC.toCode();
+					mCommsMsg.obj = regDecoders[msg.arg1].DCCestop();
+	
+					try {
+						mSrvcToCommsMsgr.send(mCommsMsg);
+		    		} catch (RemoteException e) {
+		    			e.printStackTrace();
+		    		}
+				}
 				break;
 			
 			/* Send the function key specified by ARG2 to the decoder registered to the throttle in ARG1. */
 			case DCC_FUNC_KEY:
-				mCommsMsg = Message.obtain();
-				mCommsMsg.what = CommsCmd.SND_BCST.toCode();
-				mCommsMsg.arg1 = MbusBcstOp.DCC.toCode();
-				mCommsMsg.obj = regDecoders[msg.arg1].DCCfunc(msg.arg2);
-
-				try {
-					mSrvcToCommsMsgr.send(mCommsMsg);
-	    		} catch (RemoteException e) {
-	    			e.printStackTrace();
-	    		}
+				if(regDecoders[msg.arg1] != null) {
+					mCommsMsg = Message.obtain();
+					mCommsMsg.what = CommsCmd.SND_BCST.toCode();
+					mCommsMsg.arg1 = MbusBcstOp.DCC.toCode();
+					mCommsMsg.obj = regDecoders[msg.arg1].DCCfunc(msg.arg2);
+	
+					try {
+						mSrvcToCommsMsgr.send(mCommsMsg);
+		    		} catch (RemoteException e) {
+		    			e.printStackTrace();
+		    		}
+				}
 				break;
 				
 			/* Unknown command in message */

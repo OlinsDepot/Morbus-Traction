@@ -317,23 +317,22 @@ public class DCCencoder {
 		case 14:
 			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 2);
 			dccCmd.put(REP_CNT);
+			dccCmd.put(this.dcdrAdr);
 			dccCmd.put((byte)(DCC_INS.RVS_SPD.toCode() | ESTOP_CMD));
 			break;
 		/* estop for 28 step format */	
 		case 28:
 			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 2);
 			dccCmd.put(REP_CNT);
+			dccCmd.put(this.dcdrAdr);
 			dccCmd.put((byte)(DCC_INS.RVS_SPD.toCode() | ESTOP_CMD));
 			break;
 		/* estop for 126 step format */
 		case 126:
 			dccCmd = ByteBuffer.allocate(this.dcdrAdr.length + 3);
 			dccCmd.put(REP_CNT);
-			
-			/* Create first byte of command from ADV_OPS command + Extended Speed step subcommand.  */
+			dccCmd.put(this.dcdrAdr);
 			dccCmd.put((byte)(DCC_INS.ADV_OPS.toCode() | ADV_OPS_INS.EXTD_SPD_STEP.toCode()));
-
-			/* Add direction and throttle step in the second byte. */
 			dccCmd.put((byte)ESTOP_CMD);
 			break;
 			
