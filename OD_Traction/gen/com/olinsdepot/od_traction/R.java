@@ -52,6 +52,7 @@ public final class R {
         public static final int RIGHT_THROTTLE_FRAME=0x7f080004;
         public static final int Throttle=0x7f080015;
         public static final int ThrottleFragment=0x7f080014;
+        public static final int action_about=0x7f08001c;
         public static final int action_example=0x7f08001b;
         public static final int action_settings=0x7f08001a;
         public static final int dcdrAdr1=0x7f08000c;

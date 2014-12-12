@@ -358,7 +358,9 @@ public class CommsThread extends Thread {
 			catch (IOException e) {
 				Log.d(TAG, e.getLocalizedMessage());
 				//TODO Send message to service that read on socket failed.
-			}			
+			}
+			
+			if(EmCanRsp.fromCode(rspCode) == null) return; 
 
 			/* Dispatch received server response. */
 			switch (EmCanRsp.fromCode(rspCode)) {
