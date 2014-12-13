@@ -20,7 +20,6 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.Process;
-import android.os.RemoteException;
 
 
 /**
@@ -43,7 +42,8 @@ public class CommsThread extends Thread {
 		SND_STREAM,
 		SND_BCST,
 		SND_PORT,
-		CLOSE;
+		CLOSE,
+		UNKNOWN;
 		
 		/* Returns the code for this Comms command. */
 		public int toCode() {
@@ -52,7 +52,11 @@ public class CommsThread extends Thread {
 		
 		/* Returns the Comms command for the code passed. */
 		public static CommsCmd fromCode(int indx) {
-			return CommsCmd.values()[indx];
+			if(indx < CommsCmd.UNKNOWN.ordinal()) {
+				return CommsCmd.values()[indx];
+			} else {
+				return CommsCmd.UNKNOWN;
+			}
 		}
 	}
 	
@@ -62,7 +66,8 @@ public class CommsThread extends Thread {
 	public static enum CommsEvt {
 		START,
 		STOP,
-		CONNECT;
+		CONNECT,
+		UNKNOWN;
 		
 		/* Returns the code for this Comms event */
 		public int toCode() {
@@ -71,7 +76,11 @@ public class CommsThread extends Thread {
 		
 		/* Returns the Comms Event for the code passed. */
 		public static CommsEvt fromCode(int indx) {
-			return CommsEvt.values()[indx];
+			if(indx < CommsEvt.UNKNOWN.ordinal()) {
+				return CommsEvt.values()[indx];
+			} else {
+				return CommsEvt.UNKNOWN;
+			}
 		}
 	}
 	
@@ -188,7 +197,8 @@ public class CommsThread extends Thread {
 		UNADR		(8),
 		STROUT		(9),
 		STRINRES	(10),
-		STRIN		(11);
+		STRIN		(11),
+		UNKNOWN		(255);
 		
 		/* Constructor */
 		private final int rspcode;
@@ -209,9 +219,14 @@ public class CommsThread extends Thread {
 			return this.rspcode;
 		}
 		
-		/* Returns EmCAN response for the code passed, or null if code is invalid */
+		/* Returns EmCAN response for the code passed, or UNKNOWN if code is invalid */
 		public static EmCanRsp fromCode(int rsp) {
-			return codeToEnum.get(rsp);
+			EmCanRsp retval = codeToEnum.get(rsp);
+			if(retval != null) {
+				return retval;
+			} else {
+				return EmCanRsp.UNKNOWN;
+			}
 		}
 	}
 	
@@ -360,7 +375,6 @@ public class CommsThread extends Thread {
 				//TODO Send message to service that read on socket failed.
 			}
 			
-			if(EmCanRsp.fromCode(rspCode) == null) return; 
 
 			/* Dispatch received server response. */
 			switch (EmCanRsp.fromCode(rspCode)) {

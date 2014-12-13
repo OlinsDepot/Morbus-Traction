@@ -58,7 +58,8 @@ public class MbusService extends Service {
 		DCC_RST_DCDR,
 		DCC_THTL_STEP,
 		DCC_HARD_STOP,
-		DCC_FUNC_KEY;
+		DCC_FUNC_KEY,
+		UNKNOWN;
 		
 		/* Returns the code for this MorBus Service command */
 	   public int toCode() {
@@ -67,7 +68,11 @@ public class MbusService extends Service {
 		
 		/* Returns the MorBus Service command for the code passed */
 		public static MbusSrvcCmd fromCode(int cmd) {
-			return MbusSrvcCmd.values()[cmd];
+			if(cmd < MbusSrvcCmd.UNKNOWN.ordinal()) {
+				return MbusSrvcCmd.values()[cmd];
+			} else {
+				return MbusSrvcCmd.UNKNOWN;
+			}
 		}
 	}
 	
@@ -79,7 +84,8 @@ public class MbusService extends Service {
 		SRVR_DSCNCTD,
 		SRVR_PWR_IS,
 		DCC_DCDR_ACQD,
-		DCC_DCDR_RLSD;
+		DCC_DCDR_RLSD,
+		UNKNOWN;
 
 		/* Return the code for this MorBus Service event. */
 		public int toCode() {
@@ -88,7 +94,11 @@ public class MbusService extends Service {
 		
 		/* Return the MorBus Service event for the code passed. */
 		public static MbusSrvcEvt fromCode(int evt) {
-			return MbusSrvcEvt.values()[evt];
+			if(evt < MbusSrvcEvt.UNKNOWN.ordinal()) {
+				return MbusSrvcEvt.values()[evt];
+			} else {
+				return MbusSrvcEvt.UNKNOWN;
+			}
 		}
 		
 	}
