@@ -11,7 +11,7 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.Button;
 
-import com.olinsdepot.od_traction.VerticalSeekBar;
+import com.olinsdepot.od_traction.vertical_seekbar.VerticalSeekBar;
 
 
 public class ThrottleFragment extends Fragment {
@@ -148,13 +148,6 @@ public class ThrottleFragment extends Fragment {
 			new VerticalSeekBar.OnSeekBarChangeListener() {
 				@Override
 				public void onStopTrackingTouch(VerticalSeekBar seekBar) {
-					if (tSet == 0) {
-						tDir = 0;
-						speed = 0;
-					} else {
-						speed = tDir*tSet;
-					}
-					tListener.onThrottleChange(tID, 0, speed);
 				}
 
 				@Override
@@ -166,6 +159,13 @@ public class ThrottleFragment extends Fragment {
 				public void onProgressChanged(VerticalSeekBar seekBar, int progress, boolean fromUser) {
 //					sendToServer("T1value="+progress);
 					tSet = progress;
+					if (tSet == 0) {
+						tDir = 0;
+						speed = 0;
+					} else {
+						speed = tDir*tSet;
+					}
+					tListener.onThrottleChange(tID, 0, speed);
 		
 				}
 			}

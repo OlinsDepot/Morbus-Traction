@@ -110,7 +110,7 @@ public class CommsThread extends Thread {
 	/*
 	 *  Server state shared with the send and receive threads
 	 */
-	private static enum SrvStates {
+	private static enum SrvrStates {
 		INIT,	/* Not connected to server yet */
 		READY,	/* Connected, accepting commands. */
 		BUSY,	/* Connected, waiting for a command to complete. */
@@ -122,30 +122,42 @@ public class CommsThread extends Thread {
 	 */
 	private  class SrvrState {
 		
-		private SrvStates myState;
+		private SrvrStates myState;
+		private Object lock = new Object();
 		
 		/* Constructor */
 		public SrvrState () {
-			myState = SrvStates.INIT;
+			this.myState = SrvrStates.INIT;
 		}
 		
-		/* Return current Comms state. */
-		SrvStates get() {
-			return myState;
-		}
-		
-		/* Set current Comms state. */
-		SrvStates set(SrvStates state) {
-			myState = state;
-			return myState;
+		/* Set current Comms state and notify change. */
+		private void set(SrvrStates state) {
+			synchronized (lock) {
+				this.myState = state;
+				lock.notify();
+			}
 		}
 		
 		/* Test current Comms state. */
-		boolean is(SrvStates test) {
-			return (test == myState);
+		private boolean is(SrvrStates test) {
+			synchronized (lock) {
+				return (test == this.myState);
+			}
+		}
+		
+		/* COMMS is busy */
+		private void setBusy() throws InterruptedException {
+			synchronized (lock) {
+				while (this.myState != SrvrStates.READY) {
+					lock.wait();
+				}
+				
+				this.myState = SrvrStates.BUSY;
+			}
 		}
 	}
-	SrvrState mSrvrState = new SrvrState();
+	
+	private SrvrState mSrvrState;
 	
 	/*
 	 * Various EmCAN commands and responses.
@@ -319,7 +331,7 @@ public class CommsThread extends Thread {
 		
 		/* Init Comms thread state */
 		this.setName("SrvrMsgRcv");
-		mSrvrState.set(SrvStates.INIT);
+		mSrvrState= new SrvrState();;
 
 		mSocket = sock;
 		InputStream tmpIn = null;
@@ -392,15 +404,15 @@ public class CommsThread extends Thread {
 			case PONG:
 				/* If server was BUSY, receiving PONG indicates it's now READY. */
 				if (L) Log.i(TAG, "Received PONG");
-				if (mSrvrState.equals(SrvStates.BUSY)) {
-					mSrvrState.set(SrvStates.READY);
+				if (mSrvrState.is(SrvrStates.BUSY)) {
+					mSrvrState.set(SrvrStates.READY);
 				}
 				break;
 			
 			case ID:
 				/* If state is INIT, ID says server connected. Otherwise, ignored. */
 				if (L) Log.i(TAG, "Received ID");
-				if (mSrvrState.is(SrvStates.INIT)) {
+				if (mSrvrState.is(SrvrStates.INIT)) {
 					/*Read rest of the ID response... */
 					for (bytes = 0; bytes < 1024; bytes++) {
 						try {
@@ -429,7 +441,7 @@ public class CommsThread extends Thread {
 		                MbusService.mSrvcFmCommsHandler.sendMessage(msg);
 		                
 		                /* Update server state to "Connected, ready for commands" */
-			            mSrvrState.set(SrvStates.READY);
+			            mSrvrState.set(SrvrStates.READY);
 
 		                //Start a thread to send keep alive commands every 50 seconds
 						KeepAliveThread();
@@ -557,23 +569,25 @@ public class CommsThread extends Thread {
 	 */
 	private void write(byte[] bytes)
 	{
-		/*Spin waiting for server state to be READY.
-		while (mSrvrState.get() != SrvStates.READY) {
-			try {
-				mSrvrState.wait();
-			} catch (InterruptedException e) {
-				Log.d(TAG, e.getLocalizedMessage());
-			}			
-
+		/* Wait for server state to be READY then set state to BUSY. */
+		try {
+			mSrvrState.setBusy();
+		} catch (InterruptedException e) {
+			Log.d(TAG, e.getLocalizedMessage());
 		}
-		*/
 
 		try {
 			outputStream.write(bytes);
-		}
-		catch (IOException e) {
+		} catch (IOException e) {
 			Log.d(TAG, e.getLocalizedMessage());
 			//TODO Send message to service that write on socket failed.
+		}
+		
+		/* Send PING. Server is ready for next command when it replies PONG. */
+		try {
+			outputStream.write(EmCanCmd.PING.toCode());
+		} catch (IOException e) {
+			Log.d(TAG, e.getLocalizedMessage());
 		}
 	}
 

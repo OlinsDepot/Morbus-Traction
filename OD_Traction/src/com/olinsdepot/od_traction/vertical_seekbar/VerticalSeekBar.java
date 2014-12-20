@@ -1,4 +1,5 @@
-package com.olinsdepot.od_traction;
+package com.olinsdepot.od_traction.vertical_seekbar;
+
 
 import android.content.Context;
 import android.util.AttributeSet;

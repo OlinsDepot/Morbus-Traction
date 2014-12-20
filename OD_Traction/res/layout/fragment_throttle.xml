@@ -6,7 +6,7 @@
     android:background="#cccc"
     android:orientation="vertical">
 
-    	<com.olinsdepot.od_traction.VerticalSeekBar
+    	<com.olinsdepot.od_traction.vertical_seekbar.VerticalSeekBar
 		    android:id="@+id/Throttle"
 		    android:layout_width="26dp"
 		    android:layout_height="fill_parent"

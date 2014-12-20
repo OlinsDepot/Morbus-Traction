@@ -256,17 +256,30 @@ public class MainActivity extends Activity implements
     	
     	/* Save server IP info for after the service is started.*/
     	mSrvrIP = srvrIP;
-
-    	// TODO Implement a JMRI service. Service type will be in the Bundle.
-    	// For now assume MorBus always
-    	mRailSrvcConnection = new MBusService();
     	
-    	/* Start up the service unless there's one running already */
-		if (!mSrvcBound) {
-	    	Intent mbusIntent = new Intent(this, com.olinsdepot.mbus_srvc.MbusService.class);
-			bindService(mbusIntent, mRailSrvcConnection, Context.BIND_AUTO_CREATE);
-		 }
-
+    	if (mSrvrIP.getBoolean("IP_CNCT")) {
+	    	// TODO Implement a JMRI service. Service type will be in the Bundle.
+	    	// For now assume MorBus always
+	    	// TODO Restart service if in connected state but no service bound.
+    		
+	    	/* Start up the service unless there's one running already */
+			if (!mSrvcBound) {
+		    	mRailSrvcConnection = new MBusService();
+		    	Intent mbusIntent = new Intent(this, com.olinsdepot.mbus_srvc.MbusService.class);
+				bindService(mbusIntent, mRailSrvcConnection, Context.BIND_AUTO_CREATE);
+			 }
+    	} else {
+    		/* Start process to shut down the service if it's running. */
+    		if (mSrvcBound) {
+    			Message msg = Message.obtain();
+    			msg.what = MbusSrvcCmd.SRVR_DSCNCT.toCode();
+    			try {
+    				mClientToSrvcMsgr.send(msg);
+    			} catch (RemoteException e) {
+    				e.printStackTrace();
+    			}
+    		}
+    	}
     }
 
 	/**
