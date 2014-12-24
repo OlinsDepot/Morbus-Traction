@@ -313,11 +313,11 @@ public class MainActivity extends Activity implements
 	 */
 	@Override
 	public void onThrottleChange(int tID, int tCmd, int arg) {
-        Toast.makeText(getApplicationContext(), "ID="+tID+" Speed="+arg, Toast.LENGTH_SHORT).show();
 
         // If no Morbus service connected, do nothing.
         if (!mSrvcBound) return;
         if(tCmd == 0) {
+            Toast.makeText(getApplicationContext(), "ID="+tID+" Speed="+arg, Toast.LENGTH_SHORT).show();
 	        // Create and send a message to the service, using a supported 'what' value
 	        Message msg = Message.obtain(null, MbusSrvcCmd.DCC_THTL_STEP.toCode(), tID, arg);
 	        try {

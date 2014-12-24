@@ -52,10 +52,10 @@ public class VerticalProgressBar extends View {
 
     protected int mScrollX;
 	protected int mScrollY;
-	protected int mPaddingLeft;
-	protected int mPaddingRight;
-	protected int mPaddingTop;
-	protected int mPaddingBottom;
+	protected int mPaddingLeft = 20;
+	protected int mPaddingRight = 20;
+	protected int mPaddingTop = 20;
+	protected int mPaddingBottom = 20;
 	protected ViewParent mParent;
 
     /**

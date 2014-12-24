@@ -8,11 +8,9 @@
 
     	<com.olinsdepot.od_traction.vertical_seekbar.VerticalSeekBar
 		    android:id="@+id/Throttle"
-		    android:layout_width="26dp"
-		    android:layout_height="fill_parent"
-		    android:layout_alignLeft="@+id/BTNSTOP"
-		    android:layout_alignRight="@+id/BTNSTOP"
-		    android:layout_below="@+id/BTNSTOP"
+		    android:layout_width="20dp"
+		    android:layout_height="300dp"
+		    android:layout_centerInParent="true"
 		    android:clickable="true"
 		    android:longClickable="false"
 		    android:progressDrawable="@drawable/progress_vertical"

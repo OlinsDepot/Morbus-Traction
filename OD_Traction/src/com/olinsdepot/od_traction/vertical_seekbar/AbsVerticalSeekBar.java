@@ -56,8 +56,8 @@ public class AbsVerticalSeekBar extends VerticalProgressBar{
         Drawable thumb = a.getDrawable(R.styleable.SeekBar_android_thumb);
         setThumb(thumb); // will guess mThumbOffset if thumb != null...
                          // ...but allow layout to override this
-        int thumbOffset = a.getDimensionPixelOffset(R.styleable.SeekBar_android_thumbOffset, getThumbOffset());
-        setThumbOffset(thumbOffset);
+//        int thumbOffset = a.getDimensionPixelOffset(R.styleable.SeekBar_android_thumbOffset, getThumbOffset());
+//        setThumbOffset(thumbOffset);
         a.recycle();
 
         a = context.obtainStyledAttributes(attrs, R.styleable.Theme, 0, 0);
@@ -69,7 +69,7 @@ public class AbsVerticalSeekBar extends VerticalProgressBar{
     /**
      * Sets the thumb that will be drawn at the end of the progress meter within the SeekBar.
      * <p>
-     * If the thumb is a valid drawable (i.e. not null), half its width will be
+     * If the thumb is a valid drawable (i.e. not null), half its height will be
      * used as the new thumb offset (@see #setThumbOffset(int)).
      *
      * @param thumb Drawable representing the thumb
@@ -208,7 +208,12 @@ public class AbsVerticalSeekBar extends VerticalProgressBar{
     }
 
     /**
-     * @param gap If set to {@link Integer#MIN_VALUE}, this will be ignored and
+     * Set the current position to draw the Thumb
+     * 
+     * @param h (int) the total height of the display
+     * @param thumb (drawable) drawable to use for the thumb
+     * @param scale (float) SeekBar setting, scaled from 0 to 1
+     * @param gap (int) If set to {@link Integer#MIN_VALUE}, this will be ignored and
      */
     private void setThumbPos(int h, Drawable thumb, float scale, int gap) {
         int available = h - mPaddingTop - mPaddingBottom;

@@ -148,6 +148,7 @@ public class ThrottleFragment extends Fragment {
 			new VerticalSeekBar.OnSeekBarChangeListener() {
 				@Override
 				public void onStopTrackingTouch(VerticalSeekBar seekBar) {
+					//TODO save current throttle setting so it can be restored.
 				}
 
 				@Override

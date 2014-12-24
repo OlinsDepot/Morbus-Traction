@@ -46,8 +46,8 @@ public final class R {
     public static final class id {
         public static final int BTNFKEY0=0x7f080019;
         public static final int BTNFWD=0x7f080018;
-        public static final int BTNREV=0x7f080017;
-        public static final int BTNSTOP=0x7f080016;
+        public static final int BTNREV=0x7f080016;
+        public static final int BTNSTOP=0x7f080017;
         public static final int LEFT_THROTTLE_FRAME=0x7f080003;
         public static final int RIGHT_THROTTLE_FRAME=0x7f080004;
         public static final int Throttle=0x7f080015;
