@@ -30,36 +30,44 @@ import android.os.Parcelable;
 
 @RemoteView
 public class VerticalProgressBar extends View {
-    private static final int MAX_LEVEL = 10000;
 
+	/**
+	 * Progress bar characteristics
+	 */
     int mMinWidth;
     int mMaxWidth;
     int mMinHeight;
     int mMaxHeight;
 
+    protected int mScrollX;
+	protected int mScrollY;
+	protected int mPaddingLeft;
+	protected int mPaddingRight;
+	protected int mPaddingTop;
+	protected int mPaddingBottom;
+
+	protected ViewParent mParent;
+    
+	/**
+	 * Progress bar state
+	 */
+	private static final int MAX_LEVEL = 10000;
+    private int mMax;
     private int mProgress;
     private int mSecondaryProgress;
-    private int mMax;
 
     private Drawable mProgressDrawable;
     private Drawable mCurrentDrawable;
-    Bitmap mSampleTile;
+    private Bitmap mSampleTile;
     private boolean mNoInvalidate;
     private RefreshProgressRunnable mRefreshProgressRunnable;
     private long mUiThreadId;
 
     private boolean mInDrawing;
 
-    protected int mScrollX;
-	protected int mScrollY;
-	protected int mPaddingLeft = 20;
-	protected int mPaddingRight = 20;
-	protected int mPaddingTop = 20;
-	protected int mPaddingBottom = 20;
-	protected ViewParent mParent;
 
     /**
-     * Create a new progress bar with range 0...100 and initial progress of 0.
+     * Constructor: Create a new progress bar with range 0...100 and initial progress of 0.
      * @param context the application environment
      */
     public VerticalProgressBar(Context context) {

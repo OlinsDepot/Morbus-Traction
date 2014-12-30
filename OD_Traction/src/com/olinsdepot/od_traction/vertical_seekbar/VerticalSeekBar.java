@@ -53,7 +53,12 @@ public class VerticalSeekBar extends AbsVerticalSeekBar {
     }
 
     private OnSeekBarChangeListener mOnSeekBarChangeListener;
-
+    
+    /**
+     * Constructors
+     * 
+     * @param context
+     */
     public VerticalSeekBar(Context context) {
         this(context, null);
     }

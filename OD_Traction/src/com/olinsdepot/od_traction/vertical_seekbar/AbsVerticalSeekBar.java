@@ -13,17 +13,14 @@ import android.view.MotionEvent;
 
 public class AbsVerticalSeekBar extends VerticalProgressBar{
 
-    private Drawable mThumb;
-    private int mThumbOffset;
-
     /**
      * On touch, this offset plus the scaled value from the position of the
      * touch will form the progress value. Usually 0.
      */
-    float mTouchProgressOffset;
+    float mTouchProgressOffset = 0;
 
     /**
-     * Whether this is user seekable.
+     * Whether the user is able to set this object.
      */
     boolean mIsUserSeekable = true;
 
@@ -33,14 +30,18 @@ public class AbsVerticalSeekBar extends VerticalProgressBar{
      */
     private int mKeyProgressIncrement = 1;
 
+    /**
+     * Thumb characteristics
+     */
+    private Drawable mThumb;
+    private int mThumbOffset;
     private static final int NO_ALPHA = 0xFF;
     private float mDisabledAlpha;
     
     /**
-     * Constructors
+     * Constructor: Create a new vertical seek bar
      * @param context
      */
-
     public AbsVerticalSeekBar(Context context) {
     	super(context);
     }
@@ -178,9 +179,10 @@ public class AbsVerticalSeekBar extends VerticalProgressBar{
         Drawable d = getCurrentDrawable();
         Drawable thumb = mThumb;
         int thumbWidth = thumb == null ? 0 : thumb.getIntrinsicWidth();
-        // The max height does not incorporate padding, whereas the height
-        // parameter does
-        int trackWidth = Math.min(mMaxWidth, w - mPaddingRight - mPaddingLeft);
+        int trackWidth = thumbWidth / 4;
+        mPaddingRight = mPaddingLeft = (w - trackWidth) / 2;
+        mPaddingTop = mPaddingBottom = mThumbOffset;
+//        int trackWidth = Math.min(mMaxWidth, w - mPaddingRight - mPaddingLeft);
         int max = getMax();
         float scale = max > 0 ? (float) getProgress() / (float) max : 0;
 
@@ -191,8 +193,11 @@ public class AbsVerticalSeekBar extends VerticalProgressBar{
             }
             if (d != null) {
                 // Canvas will be translated by the padding, so 0,0 is where we start drawing
-                d.setBounds(gapForCenteringTrack, 0,
+/*                d.setBounds(gapForCenteringTrack, 0,
                         w - mPaddingRight - mPaddingLeft - gapForCenteringTrack,
+                        h - mPaddingBottom - mPaddingTop); */
+                d.setBounds(0, 0,
+                        w - mPaddingRight - mPaddingLeft,
                         h - mPaddingBottom - mPaddingTop);
             }
         } else {
