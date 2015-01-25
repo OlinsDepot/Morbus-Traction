@@ -11,13 +11,15 @@
     <FrameLayout
         android:id="@+id/LEFT_THROTTLE_FRAME"
         android:layout_width="@dimen/throttle_container_width"
-        android:layout_height="@dimen/throttle_container_height"/>
+        android:layout_height="@dimen/throttle_container_height"
+        android:layout_alignParentLeft="true" />
 
     <FrameLayout
         android:id="@+id/RIGHT_THROTTLE_FRAME"
         android:layout_width="@dimen/throttle_container_width"
         android:layout_height="@dimen/throttle_container_height"
-        android:layout_toRightOf="@+id/LEFT_THROTTLE_FRAME" />
+        android:layout_toRightOf="@+id/LEFT_THROTTLE_FRAME"
+        android:layout_alignParentRight="true" />
 
 </RelativeLayout>
 

@@ -9,26 +9,22 @@ import android.view.ViewGroup;
 import android.util.Log;
 
 
+//TODO Customize view for current device orientation
+
 /**
  * The "Cab" fragment containing throttle and I/O views.
  */
 public class CabFragment extends Fragment {
-    /* tbd:
-    * t.b.d. Customize view for current device orientation
-    * t.b.d. Cab will be associated with an engine or consist
-    * t.b.d. After association, Cab will send message when inputs change
-    */  
 
-	/**
-	 * String for logging the class name
-	 */
+	/* Class name and flag for logging. */
 	private final String TAG = getClass().getSimpleName();
-	
-	/**
-	 * String for log on or off flag
-	 */
 	private static final boolean L = true;
 	
+	/**
+	 * Array of locos assigned to throttles.
+	 */
+ 	private static String rosterUnit[] = new String[4];
+
 	/**
 	 * Fragment characteristics, an example.
 	 */
@@ -38,6 +34,7 @@ public class CabFragment extends Fragment {
 	 * Null constructor for this fragment
 	 */
     public CabFragment() {
+    	/* Nothing to do. */
     }
     
     /**
@@ -51,6 +48,23 @@ public class CabFragment extends Fragment {
         return fragment;
     }
 
+    /**
+     * Assigns a loco unit to the throttle specified by tID.
+     * @param tID
+     * @param loco
+     */
+    public static void cabAssign(int tID, String loco) {
+    	rosterUnit[tID] = loco;
+    }
+    
+    /**
+     * De-assign the throttle specified by tID
+     */
+    public static void cabRelease(int tID) {
+    	rosterUnit[tID] = null;
+    }
+    
+    
     //
     //Life cycle methods for the CAB fragment
     //
@@ -89,8 +103,12 @@ public class CabFragment extends Fragment {
 
         View rootView = inflater.inflate(R.layout.fragment_cab, container, false);
 
-        getFragmentManager().beginTransaction().replace(R.id.LEFT_THROTTLE_FRAME, ThrottleFragment.newInstance(0)).commit();
-        getFragmentManager().beginTransaction().replace(R.id.RIGHT_THROTTLE_FRAME, ThrottleFragment.newInstance(1)).commit();
+        getFragmentManager().beginTransaction()
+        	.replace(R.id.LEFT_THROTTLE_FRAME, ThrottleFragment.newInstance(0, rosterUnit[0]))
+        	.commit();
+        getFragmentManager().beginTransaction()
+        	.replace(R.id.RIGHT_THROTTLE_FRAME, ThrottleFragment.newInstance(1, rosterUnit[1]))
+        	.commit();
                 
         return rootView;
     }

@@ -103,7 +103,7 @@ public class RosterFragment extends Fragment {
 
         // Give main the section number so it can update the Action Bar title.
         this.mActivity = (MainActivity) activity;
-        this.mActivity.onSectionAttached(1);
+        this.mActivity.onSectionAttached(2);
 
     }
 

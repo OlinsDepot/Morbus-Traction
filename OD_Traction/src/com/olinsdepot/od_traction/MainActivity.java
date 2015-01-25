@@ -25,10 +25,12 @@ import android.widget.Toast;
 import android.support.v4.widget.DrawerLayout;
 
 import com.olinsdepot.mbus_srvc.MbusService.*;
+import com.olinsdepot.od_traction.LocoUnit;
 
 
 /**
  * Main Activity Olins Depot Throttle Application
+ * 
  * @author mhughes
  *
  */
@@ -59,6 +61,7 @@ public class MainActivity extends Activity implements
     private boolean mSrvcBound = false;
     private Messenger mClientToSrvcMsgr = null;
  	final Messenger mClientFmSrvcMsgr = new Messenger(new SrvcMsgHandler());
+ 	
 
 
 	//
@@ -283,7 +286,7 @@ public class MainActivity extends Activity implements
     }
 
 	/**
-	 * Roster change listener. Tell service to acquire or release a DCC decoder.
+	 * Roster change listener. Acquire or release a DCC decoder.
 	 */
 	public void onRosterChange(int tID, Bundle dcdrState) {
     	if (L) Log.i(TAG,"onRosterChange");
@@ -291,12 +294,17 @@ public class MainActivity extends Activity implements
         /* If rail service not connected, do nothing. */
         if (!mSrvcBound) return;
         
-        /* Send message to the service to acquire or release the decoder passed in the bundle. */
+        /* Send message to the service to acquire or release the decoder 
+         * passed in the bundle. Assign loco to a throttle in the Cab.
+         */
+        //TODO Re-write roster and Morbus service to use LocoUnit class.
         Message msg = Message.obtain();
         if (dcdrState.getBoolean("DCDR_CNCT")) {
             msg.what = MbusSrvcCmd.DCC_ACQ_DCDR.toCode();
+            CabFragment.cabAssign(tID, dcdrState.getString("DCDR_NAME"));
         } else {
             msg.what = MbusSrvcCmd.DCC_RLS_DCDR.toCode();
+            CabFragment.cabRelease(tID);
         }
         msg.arg1 = tID;
         msg.obj = dcdrState;
@@ -305,7 +313,6 @@ public class MainActivity extends Activity implements
         } catch (RemoteException e) {
             e.printStackTrace();
         }
-//        msg.arg2 = Integer.parseInt(dcdrState.getString("DCDR_ADR"));
 	}
 
     /**
@@ -317,7 +324,7 @@ public class MainActivity extends Activity implements
         // If no Morbus service connected, do nothing.
         if (!mSrvcBound) return;
         if(tCmd == 0) {
-            Toast.makeText(getApplicationContext(), "ID="+tID+" Speed="+arg, Toast.LENGTH_SHORT).show();
+//            Toast.makeText(getApplicationContext(), "ID="+tID+" Speed="+arg, Toast.LENGTH_SHORT).show();
 	        // Create and send a message to the service, using a supported 'what' value
 	        Message msg = Message.obtain(null, MbusSrvcCmd.DCC_THTL_STEP.toCode(), tID, arg);
 	        try {
