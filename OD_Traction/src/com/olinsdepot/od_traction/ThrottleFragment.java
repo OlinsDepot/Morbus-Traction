@@ -38,6 +38,10 @@ public class ThrottleFragment extends Fragment {
 		public void onThrottleChange(int tID, int tCmd, int arg);
 	}
 	private OnThrottleChangeListener tListener;
+	
+	//////////////////////////////////////////////////////////////////////
+	// Constants
+	//////////////////////////////////////////////////////////////////////
 
 	/**
 	 * Keys for Argument bundle.
@@ -51,8 +55,10 @@ public class ThrottleFragment extends Fragment {
 	private static final String STE_YARD = "Yard_Mode";
 	private static final String STE_DIR = "Loco_Dir";
 	private static final String STE_SET = "Loco_Step";
-	private Bundle tState = null;
 
+	//////////////////////////////////////////////////////////////////////
+	// Local Variables
+	//////////////////////////////////////////////////////////////////////
 	/**
 	 *  This throttle's View components
 	 */
@@ -87,7 +93,7 @@ public class ThrottleFragment extends Fragment {
 	////////////////////////////////////////////////////////////////////////////////////////
 
     /**
-     * Returns a new instance of the throttle fragment
+     * Factory method to return a new instance of the throttle fragment
      * @param - id for this throttle.
      * @return - instance of this fragment.
      */
@@ -127,11 +133,23 @@ public class ThrottleFragment extends Fragment {
 	 *  On Create method(non-Javadoc)
 	 * @see android.app.Fragment#onCreate(android.os.Bundle)
 	 */
-	public void onCreate(Bundle fragState) {
-		super.onCreate(fragState);
-		if (L) Log.i(TAG, "onCreate");
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		if (L) Log.i(TAG, "onCreate" + (null == savedInstanceState ? " No saved state" : " Restored state") + " ID = " + tID);
         
-		onRestoreInstanceState(fragState);
+		/* Get Throttle ID argument passed when instance created. */
+        tID = getArguments().getInt(ARG_TID);
+
+        /* Restore instance state: Init to default first time, to saved values thereafter */
+		if (savedInstanceState == null) {
+			tYard = false;
+			tDir = 0;
+			tSet = 0;
+		} else {
+			tYard = savedInstanceState.getBoolean(STE_YARD);
+			tDir = savedInstanceState.getInt(STE_DIR);
+			tSet = savedInstanceState.getInt(STE_SET);
+		}
 	}
 	
 	/**
@@ -140,11 +158,10 @@ public class ThrottleFragment extends Fragment {
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		super.onCreateView(inflater, container, savedInstanceState);
-		if (L) Log.i(TAG, "onCreateView");
+		if (L) Log.i(TAG, "onCreateView" + (null == savedInstanceState ? " No saved state" : " Restored state") + " ID = " + tID);
 
         final View tFragView = inflater.inflate(R.layout.fragment_throttle, container, false);
         
-        tID = getArguments().getInt(ARG_TID);
         unitID = getArguments().getString(ARG_LOCO);
         
         if (unitID != null) {
@@ -248,9 +265,9 @@ public class ThrottleFragment extends Fragment {
 	 *  On Activity created
 	 */
 	@Override
-	public void onActivityCreated(Bundle saved) {
-		super.onActivityCreated(saved);
-        if (L) Log.i(TAG, "onActivityCreated");
+	public void onActivityCreated(Bundle savedInstanceState) {
+		super.onActivityCreated(savedInstanceState);
+        if (L) Log.i(TAG, "onActivityCreated" + (null == savedInstanceState ? " No saved state" : " Restored state") + " ID = " + tID);
 	}
 	
 	/**
@@ -270,8 +287,6 @@ public class ThrottleFragment extends Fragment {
 	{
 		super.onResume();
         if (L) Log.i(TAG, "onResume");
-    	onRestoreInstanceState(tState);
-    	tState = null;
 	}
 	
 	/**
@@ -282,8 +297,6 @@ public class ThrottleFragment extends Fragment {
 	{
 		super.onPause();
         if (L) Log.i(TAG, "onPause");
-        tState = new Bundle();
-        onSaveInstanceState(tState);
 	}
 	
 	/**
@@ -308,24 +321,9 @@ public class ThrottleFragment extends Fragment {
 		toSave.putInt(STE_SET, tSet);
 	}
 	
-	/**
-	 * Restore Instance State
-	 */
-	private void onRestoreInstanceState(Bundle fromSave) {
-		/* Initialize to default first time, to save values thereafter.  */
-		if (fromSave == null) {
-			tYard = false;
-			tDir = 0;
-			tSet = 0;
-		} else {
-			tYard = fromSave.getBoolean(STE_YARD);
-			tDir = fromSave.getInt(STE_DIR);
-			tSet = fromSave.getInt(STE_SET);
-		}
-	}
 	
     ////////////////////////////////////////////////////////////////////////////////////////
-	// Utility
+	// Utility methods
 	////////////////////////////////////////////////////////////////////////////////////////
 	/**
 	 * Set Function Keys

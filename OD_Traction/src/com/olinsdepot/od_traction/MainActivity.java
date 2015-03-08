@@ -2,6 +2,8 @@ package com.olinsdepot.od_traction;
 
 import android.app.Activity;
 import android.app.ActionBar;
+import android.app.Fragment;
+import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.content.ComponentName;
 import android.content.Context;
@@ -40,12 +42,17 @@ public class MainActivity extends Activity implements
 		RosterFragment.OnRosterChangeListener,
         ThrottleFragment.OnThrottleChangeListener {
 	
-	/**
-	 * Logging - String for the class name, Logging on/off flag.
-	 */
 	private final String TAG = getClass().getSimpleName();
 	private static final boolean L = true;
 	
+	//////////////////////////////////////////////////////////////////////
+	// Constants
+	//////////////////////////////////////////////////////////////////////
+	private static final int tNum = 2; /* Number of throttles fixed at 2 for now */
+	
+	//////////////////////////////////////////////////////////////////////
+	// Local variables
+	/////////////////////////////////////////////////////////////////////
 	
     /**
      * Nav Drawer - Fragment managing the behaviors, interactions and presentation.
@@ -64,9 +71,9 @@ public class MainActivity extends Activity implements
  	
 
 
-	//
+	//////////////////////////////////////////////////////////////////////
 	// MAIN Life Cycle Call Backs
-	//
+	//////////////////////////////////////////////////////////////////////
 	
 	/**
 	 * OnCreate method
@@ -74,7 +81,7 @@ public class MainActivity extends Activity implements
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (L) Log.i(TAG, "onCreate" + (null == savedInstanceState ? " Restored state" : " No saved state"));
+        if (L) Log.i(TAG, "onCreate" + (null == savedInstanceState ? " No saved state" : " Restored state"));
 
         setContentView(R.layout.activity_main);
 
@@ -153,25 +160,47 @@ public class MainActivity extends Activity implements
 	 */
     @Override
     public void onNavigationDrawerItemSelected(int position) {
-        // update the main content by replacing fragments
-        FragmentTransaction SetMainView = getFragmentManager().beginTransaction();
+    	
+    	FragmentManager fMgr = getFragmentManager();
+    	fMgr.enableDebugLogging(true);
+    	FragmentTransaction SetMainView = fMgr.beginTransaction();
+    	int bStack;
+
+    	// update the main content by replacing fragments
     	switch (position) {
 	    	case 0:
 	            SetMainView.replace(R.id.main_container, NetFragment.newInstance())
 	            .commit();
 	    		break;
 	    	case 1:
-	            SetMainView.replace(R.id.main_container, RosterFragment.newInstance())
-	            .commit();
+	    		RosterFragment rFrag = (RosterFragment) fMgr.findFragmentByTag("ROSTER");
+	    		if (null == rFrag) {
+	    			rFrag = RosterFragment.newInstance();
+	    		}
+	            SetMainView.replace(R.id.main_container, rFrag, "ROSTER");
+	            SetMainView.addToBackStack("ROSTER");
+	            SetMainView.commit();
+
+	            Fragment frag0 = fMgr.findFragmentById(R.id.main_container);
+	    		bStack = fMgr.getBackStackEntryCount();
 	    		break;
 	    	case 2:
 	            SetMainView.replace(R.id.main_container, PlaceholderFragment.newInstance(3))
 	            .commit();
 	    		break;
 	    	case 3:
-	            SetMainView.replace(R.id.main_container, CabFragment.newInstance())
-	            .commit();
+	    		CabFragment cFrag = (CabFragment) fMgr.findFragmentByTag("CAB");
+	    		if (null == cFrag) {
+	    			cFrag = CabFragment.newInstance(tNum);
+	    		}
+    			SetMainView.replace(R.id.main_container, cFrag, "CAB");
+    			SetMainView.addToBackStack("CAB");
+    			SetMainView.commit();
+    			
+	    		Fragment frag1 = fMgr.findFragmentById(R.id.main_container);
+	    		bStack = fMgr.getBackStackEntryCount();
 	    		break;
+
     	}
     }
 
