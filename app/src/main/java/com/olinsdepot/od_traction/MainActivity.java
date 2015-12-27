@@ -30,7 +30,7 @@ import android.widget.Toast;
 import android.support.v4.widget.DrawerLayout;
 
 import com.olinsdepot.mbus_srvc.MbusService.*;
-import com.olinsdepot.od_traction.LocoUnit;
+// import com.olinsdepot.od_traction.LocoUnit;
 
 
 /**
@@ -47,10 +47,11 @@ public class MainActivity extends Activity implements
 	
 	private final String TAG = getClass().getSimpleName();
 	private static final boolean L = true;
-	
-	//////////////////////////////////////////////////////////////////////
+
+	////////////////////////////////////////////////////////////////////
 	// Constants
-	//////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////
+
 	private static final int tNum = 2; /* Number of throttles fixed at 2 for now */
 	
 	//////////////////////////////////////////////////////////////////////
@@ -428,7 +429,7 @@ public class MainActivity extends Activity implements
     		mClientToSrvcMsgr = null;
     		mSrvcBound = false;
     	}
-    };
+    }
     
     
 	/**
