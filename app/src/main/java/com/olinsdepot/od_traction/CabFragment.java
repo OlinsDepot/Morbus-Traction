@@ -48,8 +48,8 @@ public class CabFragment extends Fragment {
     /**
      * Returns a new instance of the CAB view fragment
      * 
-     * @param Number of throttle views to display
-     * @return an instance of CabFragment
+     * @param "Number of throttle views to display"
+     * @return "an instance of CabFragment"
      */
     public static CabFragment newInstance(int numT) {
         CabFragment fragment = new CabFragment();

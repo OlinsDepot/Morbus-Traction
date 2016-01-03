@@ -25,6 +25,8 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import android.view.View;
+import android.widget.Button;
 import android.widget.PopupWindow;
 import android.widget.Toast;
 import android.support.v4.widget.DrawerLayout;
@@ -278,11 +280,15 @@ public class MainActivity extends Activity implements
             case R.id.action_about:
                 final LayoutInflater puff =
                         (LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-                final PopupWindow abtWin =
-                        new PopupWindow(
-                                puff.inflate(R.layout.dialogue_about, null, false),
-                                620,
-                                500);
+				final View viewAbout = puff.inflate(R.layout.dialogue_about, null, false);
+                final PopupWindow abtWin = new PopupWindow(viewAbout, 620,500);
+
+                Button aboutBtn = (Button) viewAbout.findViewById(R.id.aboutBtn);
+                aboutBtn.setOnClickListener(new View.OnClickListener() {
+                                                public void onClick(View v) {
+                                                    abtWin.dismiss();
+                                                }
+                                            });
                 abtWin.showAtLocation(
                         this.findViewById(R.id.main_container),
                         Gravity.CENTER,
