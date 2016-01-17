@@ -37,7 +37,7 @@ import com.olinsdepot.mbus_srvc.MbusService.*;
 
 /**
  * Main Activity Olins Depot Throttle Application
- * 
+ *
  * @author mhughes
  *
  */
@@ -46,7 +46,7 @@ public class MainActivity extends Activity implements
 		NetFragment.OnServerChangeListener,
 		RosterFragment.OnRosterChangeListener,
         ThrottleFragment.OnThrottleChangeListener {
-	
+
 	private final String TAG = getClass().getSimpleName();
 	private static final boolean L = true;
 
@@ -55,17 +55,17 @@ public class MainActivity extends Activity implements
 	////////////////////////////////////////////////////////////////////
 
 	private static final int tNum = 2; /* Number of throttles fixed at 2 for now */
-	
+
 	//////////////////////////////////////////////////////////////////////
 	// Local variables
 	/////////////////////////////////////////////////////////////////////
-	
+
     /**
      * Nav Drawer - Fragment managing the behaviors, interactions and presentation.
      */
     private NavigationDrawerFragment mNavigationDrawerFragment;
     private CharSequence mTitle;
-    
+
     /**
      * Rail Service - Interface to layout server
      */
@@ -74,16 +74,13 @@ public class MainActivity extends Activity implements
     private boolean mSrvcBound = false;
     private Messenger mClientToSrvcMsgr = null;
  	final Messenger mClientFmSrvcMsgr = new Messenger(new SrvcMsgHandler());
- 	
+
 
 
 	//////////////////////////////////////////////////////////////////////
 	// MAIN Life Cycle Call Backs
 	//////////////////////////////////////////////////////////////////////
-	
-	/**
-	 * OnCreate method
-	 */
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -96,7 +93,7 @@ public class MainActivity extends Activity implements
 
         // Set up the drawer.
         mNavigationDrawerFragment.setUp(R.id.navigation_drawer, (DrawerLayout) findViewById(R.id.drawer_layout));
-        
+
 		//Check if network is up -
 		ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 		NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
@@ -156,17 +153,17 @@ public class MainActivity extends Activity implements
 	}
 
 
-	
+
 	//
 	// Page navigation Interface
 	//
-	
+
 	/**
 	 * Nav Item Selected: Notification that an item has been selected from the nav drawer.
 	 */
     @Override
     public void onNavigationDrawerItemSelected(int position) {
-    	
+
     	FragmentManager fMgr = getFragmentManager();
     	fMgr.enableDebugLogging(true);
     	FragmentTransaction SetMainView = fMgr.beginTransaction();
@@ -202,7 +199,7 @@ public class MainActivity extends Activity implements
     			SetMainView.replace(R.id.main_container, cFrag, "CAB");
     			SetMainView.addToBackStack("CAB");
     			SetMainView.commit();
-    			
+
 	    		Fragment frag1 = fMgr.findFragmentById(R.id.main_container);
 	    		bStack = fMgr.getBackStackEntryCount();
 	    		break;
@@ -281,7 +278,7 @@ public class MainActivity extends Activity implements
                 final LayoutInflater puff =
                         (LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 				final View viewAbout = puff.inflate(R.layout.dialogue_about, null, false);
-                final PopupWindow abtWin = new PopupWindow(viewAbout, 620,500);
+                final PopupWindow abtWin = new PopupWindow(viewAbout, 700,700);
 
                 Button aboutBtn = (Button) viewAbout.findViewById(R.id.aboutBtn);
                 aboutBtn.setOnClickListener(new View.OnClickListener() {
@@ -299,21 +296,21 @@ public class MainActivity extends Activity implements
         }
     }
 
-    
+
     //
     // Application page interfaces
     //
-    
+
     /**
      * Server change listener.
      */
     @Override
     public void onServerChange(Bundle srvrIP) {
     	if (L) Log.i(TAG,"onServerChange");
-    	
+
     	/* Save server IP info for after the service is started.*/
     	mSrvrIP = srvrIP;
-    	
+
     	if (mSrvrIP.getBoolean("IP_CNCT")) {
 	    	// TODO Implement a JMRI service. Service type will be in the Bundle.
 	    	// For now assume MorBus always
@@ -394,19 +391,19 @@ public class MainActivity extends Activity implements
 	        } catch (RemoteException e) {
 	            e.printStackTrace();
 	        }
-        	
+
         }
 	}
-    
+
     //
     // MorBus service interface.
     //
-    
+
     /**
      * Class for connecting to the MBus service.
      */
     private class MBusService implements ServiceConnection {
-    	
+
     	/* Called when service connects. */
     	public void onServiceConnected(ComponentName className, IBinder service) {
     		if(L) Log.i(TAG, "onServiceConnected - " + className);
@@ -428,7 +425,7 @@ public class MainActivity extends Activity implements
                e.printStackTrace();
             }
     	}
-    	
+
     	/* Called when service disconnects unexpectedly. */
     	public void onServiceDisconnected(ComponentName className) {
     		Log.d(TAG, "onServiceDisconnected - " + className);
@@ -436,35 +433,35 @@ public class MainActivity extends Activity implements
     		mSrvcBound = false;
     	}
     }
-    
-    
+
+
 	/**
 	 * Handler for messages from MBus service to Client. Receives events from
 	 * MBus service to Main thread to be parsed for display on the GUI.
-	 * 
+	 *
 	 */
 	class SrvcMsgHandler extends Handler {
-		
+
 		@Override
 		public void handleMessage(Message msg) {
 			if (L) Log.i("MsgToClient", "Event Received = " + msg.what);
-			
+
 			switch (MbusSrvcEvt.fromCode(msg.what)) {
-			
+
 			case SRVR_CNCTD:
 				/* Announce service startup */
 				Toast.makeText(getApplicationContext(), "Mbus Service Started", Toast.LENGTH_SHORT).show();
 				break;
-				
+
 			case SRVR_DSCNCTD:
 				break;
-				
+
 			case SRVR_PWR_IS:
 				break;
-				
+
 			case DCC_DCDR_ACQD:
 				break;
-				
+
 			case DCC_DCDR_RLSD:
 				break;
 

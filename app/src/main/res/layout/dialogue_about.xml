@@ -5,6 +5,13 @@
     android:layout_height="match_parent"
     android:background="#778899">
 
+    <ImageView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/imageView"
+        android:adjustViewBounds="false"
+        android:background="@drawable/depot" />
+
     <TextView
         android:id="@+id/aboutText"
         android:layout_width="wrap_content"
