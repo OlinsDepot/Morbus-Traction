@@ -331,7 +331,7 @@ public class ThrottleFragment extends Fragment {
 	 * Assign function key numbers, text and handlers
 	 * to the arrays of function buttons.
 	 * 
-	 * @param view
+	 * //@param view
 	 * @return void
 	 */
 	private void setFkeys(View throttleView) {
